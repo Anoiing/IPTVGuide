@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { _config, _status, getStatus } from '@/store';
+  import { _config, _status, getStatus, getConfig } from '@/store';
   import { onDestroy, onMount } from 'svelte';
-  import { runOnce, cancel } from './model';
+  import { initTask, runOnce, cancel } from './model';
 
   const STATUS: any = {
     NOT_CONFIGURED: '未配置',
@@ -13,6 +13,7 @@
   let status_unsubscribe: any;
 
   onMount(() => {
+    initTask();
     getStatus();
 
     status_unsubscribe = _status.subscribe((v) => {
@@ -21,6 +22,7 @@
           getStatus();
         }, 2000);
       } else {
+        getConfig();
         window.clearInterval(t);
         t = null;
       }

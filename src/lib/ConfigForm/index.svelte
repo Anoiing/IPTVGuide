@@ -27,7 +27,7 @@
         ? '请填写正确的Cron表达式'
         : '';
     } else {
-      cronRef.value = '* 2 * * *';
+      cronRef.value = '* */2 * * *';
     }
 
     if (areaError || cronError) {
@@ -104,7 +104,7 @@
             'flex-1 border-2 border-gray-300 h-10 leading-10 px-4 rounded focus:border-blue-500 placeholder:text-gray-300',
             cronError && 'border-red-500'
           )}
-          placeholder="* 2 * * *"
+          placeholder="* */2 * * *"
           on:focus={handleFocus}
         />
         {#if cronError}

@@ -41,6 +41,8 @@ let systemState = 'NOT_CONFIGURED';
 let seenNames = [];
 // 运行日志
 const runLog = [];
+// 定时任务
+let task = null;
 
 // 保存格式化的日志
 const pushLog = (s) => {
@@ -292,7 +294,6 @@ const saveToFile = async (allChannels) => {
     await fs.writeFileSync('./output/channels.m3u', m3uContent);
     pushLog('m3u文件保存成功');
     pushLog('本次任务执行完成');
-    pushLog('===================');
 
     systemState = 'WAIT_EXECUTION';
 
@@ -308,6 +309,7 @@ const saveToFile = async (allChannels) => {
 
 // 获取频道数据的主入口方法
 const getChannles = async () => {
+  pushLog('-------------------');
   pushLog('开始执行任务');
   systemState = 'RUNNING';
   seenNames = [];
@@ -340,6 +342,28 @@ const getChannles = async () => {
  * 以下是提供给前端的接口
  */
 
+app.get('/initTask', async ({ query }, res) => {
+  try {
+    systemConfig = getConfig();
+    if (systemConfig.cron) {
+      // 先停止原来的定时任务
+      if (task) {
+        task.stop();
+      }
+      // 设定新的定时任务
+      task = cron.schedule(req.body.cron, () => {
+        pushLog('===================');
+        pushLog('自动执行一次任务');
+        getChannles();
+      });
+    }
+    res.send(response.success(true));
+  } catch (error) {
+    res.send(response.error(error));
+  }
+});
+
+
 // 校验cron表达式
 app.get('/verifierCron', async ({ query }, res) => {
   try {
@@ -363,6 +387,17 @@ app.post('/saveConfig', async (req, res) => {
   try {
     fs.writeFileSync('./config/config.json', JSON.stringify(req.body));
     systemState = 'WAIT_EXECUTION';
+    // 先停止原来的定时任务
+    if (task) {
+      task.stop();
+    }
+    // 设定新的定时任务
+    task = cron.schedule(req.body.cron, () => {
+      pushLog('===================');
+      pushLog('自动执行一次任务');
+      getChannles();
+    }, { timezone: 'Asia/Shanghai' });
+    console.log(task)
     res.send(response.success(true));
   } catch (error) {
     res.send(response.error(error));
@@ -393,6 +428,7 @@ app.get('/getStatus', async (req, res) => {
 // 运行一次任务
 app.get('/runOnce', (req, res) => {
   try {
+    pushLog('===================');
     pushLog('手动执行一次任务');
     getChannles();
     res.send(response.success(true));
@@ -423,7 +459,9 @@ app.get('/getLogs', async (req, res) => {
   try {
     let logs = '';
     try {
-      logs = fs.readFileSync('./config/log.txt', 'utf8');
+      const allLogs = fs.readFileSync('./config/log.txt', 'utf8');
+      const lines = allLogs.split('\n');
+      logs = lines.slice(0, 100).join('\n');
     } catch (error) { }
     res.send(response.success(logs));
   } catch (error) {

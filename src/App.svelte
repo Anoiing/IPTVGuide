@@ -1,16 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { _config, getConfig } from './store';
+  import { _config } from './store';
   import ConfigForm from './lib/ConfigForm/index.svelte';
   import Execution from './lib/Execution/index.svelte';
   import Layout from './lib/Layout/index.svelte';
   import MainLogs from './lib/MainLogs/index.svelte';
   import ScrapingResults from './lib/ScrapingResults/index.svelte';
   import Welcome from './lib/Welcome.svelte';
-
-  onMount(() => {
-    getConfig();
-  });
 </script>
 
 <Layout>
