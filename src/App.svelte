@@ -3,6 +3,7 @@
   import ConfigForm from './lib/ConfigForm/index.svelte';
   import Execution from './lib/Execution/index.svelte';
   import Layout from './lib/Layout/index.svelte';
+  import MainLogs from './lib/MainLogs/index.svelte';
   import ScrapingResults from './lib/ScrapingResults/index.svelte';
   import Welcome from './lib/Welcome.svelte';
 
@@ -11,12 +12,15 @@
 
 <Layout>
   <Welcome />
-  <div class="grid grid-cols-12 divide-x _container">
-    <div class="col-span-7 p-4">
+  <div class="grid grid-cols-12 md:divide-x _container">
+    <div class="col-span-12 p-4 md:col-span-7">
       <ConfigForm />
-      <ScrapingResults />
+      <Execution />
     </div>
-    <div class="col-span-5 p-4"><Execution /></div>
+    <div class="col-span-12 p-4 md:col-span-5">
+      <ScrapingResults />
+      <MainLogs />
+    </div>
   </div>
 </Layout>
 

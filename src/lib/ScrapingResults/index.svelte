@@ -1,7 +1,7 @@
 <script lang="ts"></script>
 
-<div class="mt-4">
+<div>
   <div class="mb-8">
-    <h1 class="font-extrabold text-xl">搜刮结果 😝</h1>
+    <h1 class="text-xl font-extrabold">搜刮结果 😝</h1>
   </div>
 </div>

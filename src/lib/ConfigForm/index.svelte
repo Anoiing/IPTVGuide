@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { verifierCron, saveConfig, getConfig } from './model';
   import cx from 'classnames';
-  import toast from '@/lib/Toasat';
+  import toast from '@/lib/Toast';
 
   let areaRef: any;
   let cronRef: any;
@@ -45,12 +45,12 @@
 
 <div class="h-[300px]">
   <div class="mb-8">
-    <h1 class="font-extrabold text-xl">配置项 ⚙️</h1>
+    <h1 class="text-xl font-extrabold">配置项 ⚙️</h1>
   </div>
-  <div class=" pl-10 pr-20">
+  <div class="pl-10 pr-20 ">
     <div class="flex items-start mb-8">
-      <div class="font-normal text-lg w-24 flex-none leading-10">
-        <b class=" text-red-500 font-bold mr-1">*</b>省&nbsp;/&nbsp;市：
+      <div class="flex-none w-24 text-lg font-normal leading-10">
+        <b class="mr-1 font-bold text-red-500 ">*</b>省&nbsp;/&nbsp;市：
       </div>
       <div class="flex flex-col w-full">
         <input
@@ -63,12 +63,12 @@
           on:focus={() => (areaError = '')}
         />
         {#if areaError}
-          <div class="mt-1 text-red-500 text-sm">{areaError}</div>
+          <div class="mt-1 text-sm text-red-500">{areaError}</div>
         {/if}
       </div>
     </div>
     <div class="flex items-start mb-8">
-      <div class=" font-normal text-lg w-24 flex-none leading-10">
+      <div class="flex-none w-24 text-lg font-normal leading-10 ">
         定时任务：
       </div>
       <div class="flex flex-col w-full">
@@ -82,14 +82,14 @@
           on:focus={() => (cronError = '')}
         />
         {#if cronError}
-          <div class="mt-1 text-red-500 text-sm">{cronError}</div>
+          <div class="mt-1 text-sm text-red-500">{cronError}</div>
         {/if}
       </div>
     </div>
 
     <div class="flex justify-center">
       <button
-        class="bg-indigo-1 text-white px-8 py-1 rounded text-lg hover:bg-indigo-600"
+        class="px-8 py-1 text-lg text-white rounded bg-indigo-1 hover:bg-indigo-600"
         on:click={handleSave}
       >
         保&nbsp;&nbsp;存
