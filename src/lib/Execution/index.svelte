@@ -12,7 +12,9 @@
   let t: any;
 
   onMount(() => {
-    getSystemStatus();
+    t = window.setInterval(() => {
+      getSystemStatus();
+    }, 3000);
   });
 
   onDestroy(() => {
@@ -26,19 +28,11 @@
 
   const handleRunOnce = async () => {
     await runOnce();
-    t = window.setInterval(() => {
-      getSystemStatus();
-      if (status !== 'RUNNING') {
-        window.clearInterval(t);
-        t = undefined;
-      }
-    }, 1000);
+    getSystemStatus();
   };
 
   const handleCancel = async () => {
     await cancel();
-    window.clearInterval(t);
-    t = undefined;
     getSystemStatus();
   };
 </script>

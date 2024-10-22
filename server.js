@@ -6,7 +6,6 @@ import morgan from 'morgan';
 import puppeteer from 'puppeteer';
 
 const app = express();
-// const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 const accessLogStream = fs.createWriteStream('./config/access.log', { flags: 'a' });
 app.use(cors());
 app.use(express.json());
@@ -35,12 +34,14 @@ const response = {
 let gBrowser = null;
 // 全局搜索（结果）页面对象
 let gSearchPage = null;
+// 详情页
+let gDetailPage = null;
 // 系统配置
 let systemConfig = {};
 // 运行状态
 let systemState = 'NOT_CONFIGURED';
 // 获取m3u的源名称集合，用于去重
-let seenNames = null;
+let seenNames = [];
 // 运行日志
 const runLog = [];
 // 运行错误日志
@@ -48,7 +49,7 @@ let errorLog = '';
 
 // 保存格式化的日志
 const pushLog = (s) => {
-  const l = `${new Date().toString()}  ${s}`;
+  const l = `${(new Date().toString()).replace('GMT+0800 (中国标准时间)', '')}  ${s}`;
   runLog.push(l);
   let originLog = '';
   try {
@@ -63,9 +64,9 @@ const gTry = (fn) => {
   try {
     return fn();
   } catch (error) {
-    pushLog(String(error));
+    pushLog(error.message || String(error));
   } finally {
-    closeBrowser();
+    // closeBrowser();
   }
 };
 
@@ -74,9 +75,9 @@ const runBrowser = async () => {
   await gTry(async () => {
     if (!gBrowser) {
       gBrowser = await puppeteer.launch({
-        devtools: true, // 打开或关闭浏览器的开发者模式
+        devtools: false, // 打开或关闭浏览器的开发者模式
         headless: false, // 是否以无头模式运行浏览器
-        timeout: 300000, // 超时时间，单位为毫秒
+        timeout: 0, // 超时时间，单位为毫秒
         slowMo: 100, // 放慢速度，单位为毫秒
         ignoreHTTPSErrors: true, // 若访问的是https页面，则忽略https错误
       });
@@ -91,14 +92,26 @@ const closeBrowser = async () => {
   }
 };
 
-// 打开指定搜索页面
-const openSearchPage = async () => {
-  await gTry(async () => {
-    gSearchPage = await gBrowser.newPage();
-    const loadReasult = await gSearchPage.goto('http://www.foodieguide.com/iptvsearch/hoteliptv.php');
-    console.log(JSON.stringify(loadReasult), '---->loadReasult')
-  });
-};
+
+const maxRetries = 3;
+let retries = 0;
+// 带3次重试的打开指定页面
+const goto = async (page, url) => {
+  while (retries < maxRetries) {
+    try {
+      await page.goto(url, { timeout: 60000 });
+      break;
+    } catch (error) {
+      if (error.message.indexOf('timeout') > -1 || error.message.indexOf('ERR_TIMED_OUT') > -1) {
+        retries++;
+        pushLog(`${url} 页面加载超时，重试 ${retries} 次`);
+      } else {
+        pushLog(error.message);
+      }
+    }
+  }
+}
+
 
 // 等待首页的搜索框加载完成并自动提交搜索
 const handleSearch = async () => {
@@ -109,13 +122,14 @@ const handleSearch = async () => {
     } catch (error) {
       return new Error('配置文件不存在!');
     }
-    gSearchPage.waitForSelector('input[type="submit"]',).then(async () => {
+    gSearchPage.waitForSelector('input[type="submit"]', { timeout: 300000 }).then(async () => {
       const input = await gSearchPage.$('input[id="search"]');
       await gSearchPage.evaluate((el, area) => {
         el.value = area;
       }, input, systemConfig.area);
-      await gSearchPage.setDefaultTimeout(1000);
+      pushLog(`开始搜索地区：${systemConfig.area}`);
       await gSearchPage.click('input[type="submit"]');
+      pushLog('等待获取地区搜索结果...');
     })
   });
 };
@@ -123,7 +137,7 @@ const handleSearch = async () => {
 // 等待搜索结果页面加载完成并获取结果列表
 const getSearchResults = async () => {
   await gTry(() => {
-    gSearchPage.waitForSelector('div.tables',).then(async () => {
+    gSearchPage.waitForSelector('div.tables', { timeout: 300000 }).then(async () => {
       const resultContainer = await gSearchPage.$('div.tables');
       pushLog('获取地区搜索结果成功，正在解析结果...');
       let resultList = await gSearchPage.evaluate((el) => {
@@ -160,12 +174,12 @@ const getSearchResults = async () => {
 
       // 按存活时间排序，优先选择存活时间最长的
       resultList.sort((a, b) => b.life - a.life);
-      pushLog('获取地区搜索结果成功，开始优选地址...');
+      pushLog('开始优选地址...');
 
       // 开启新页面用于加载详情页
       let idx = 0;
-      const detailPage = await gBrowser.newPage();
-      getBestChannleList(resultList, detailPage, idx);
+      gDetailPage = await gBrowser.newPage();
+      getBestChannleList(resultList, gDetailPage, idx);
     });
   });
 };
@@ -175,9 +189,9 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
   await gTry(async () => {
     const checkedAddress = resultList[idx];
     pushLog(`检查地址：${checkedAddress.address}`);
-    await detailPage.goto(checkedAddress.href);
+    await goto(detailPage, checkedAddress.href);
 
-    detailPage.waitForSelector('div.result').then(async () => {
+    detailPage.waitForSelector('div.result', { timeout: 300000 }).then(async () => {
       const jugeContents = await detailPage.$('div#content');
       // 判断源是否失效
       let isFail = await detailPage.evaluate((el) => {
@@ -219,7 +233,7 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
 const getPaginatedChannels = async (detailPage, index) => {
   return await gTry(async () => {
     const tempPagination = await detailPage.$('div#Pagination');
-    const currentPageChannels = await detailPage.evaluate((el, idx) => {
+    const currentPageChannels = await detailPage.evaluate((el, idx, seenNames) => {
       // 点击对应的页码
       const targetEle = Array.from(el.children).find((pele) => pele.innerText === String(idx + 1));
       targetEle.click();
@@ -232,17 +246,17 @@ const getPaginatedChannels = async (detailPage, index) => {
         if (child.childElementCount === 2) {
           // 按名称去重
           const name = child.children[0].innerText.trim().replace(/高清$/, '');
-          if (!seenNames.has(name)) {
+          if (!seenNames.includes(name)) {
             channels.push({
               name,
               url: child.children[1].innerText.trim(),
             });
-            seenNames.add(name);
+            seenNames.push(name);
           }
         }
       }
       return channels;
-    }, tempPagination, index);
+    }, tempPagination, index, seenNames);
     return currentPageChannels;
   });
 };
@@ -251,7 +265,7 @@ const getPaginatedChannels = async (detailPage, index) => {
 const saveToFile = async (allChannels) => {
   await gTry(async () => {
     // 保存到本地
-    pushLog('获取频道成功，开始生成m3u文件保存到本地...');
+    pushLog('获取频道成功，开始生成文件保存到本地...');
 
     // 保存到json文件
     await fs.writeFileSync('./output/channels.json', JSON.stringify(allChannels, null, 2));
@@ -259,13 +273,21 @@ const saveToFile = async (allChannels) => {
     // 保存到txt文件
     const txtContent = allChannels.map((channel) => `${channel.name},${channel.name}\n${channel.url}`).join('\n');
     await fs.writeFileSync('./output/channels.txt', txtContent);
-    pushLog('txt文件保存成功，任务执行完成');
+    pushLog('txt文件保存成功');
 
     // 生成m3u文件
     let m3uContent = '#EXTM3U x-tvg-url="https://live.fanmingming.com/e.xml"\n';
     m3uContent += allChannels.map((channel) => `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="",${channel.name}\n${channel.url}`).join('\n');
     await fs.writeFileSync('./output/channels.m3u', m3uContent);
-    pushLog('m3u文件保存成功，任务执行完成');
+    pushLog('m3u文件保存成功');
+    pushLog('本次任务执行完成');
+
+    if (gDetailPage) {
+      await gDetailPage.close();
+    }
+    if (gSearchPage) {
+      await gSearchPage.close();
+    }
   });
 };
 
@@ -274,19 +296,19 @@ const saveToFile = async (allChannels) => {
 const getChannles = async () => {
   pushLog('开始执行任务');
   systemState = 'RUNNING';
-  seenNames = new Set();
+  seenNames = [];
   try {
     // 启动浏览器
     pushLog('开始浏览器进程');
     await runBrowser();
     // 打开指定搜索页面
     pushLog('打开并获取搜索页面');
-    await openSearchPage();
+    gSearchPage = await gBrowser.newPage();
+    await goto(gSearchPage, 'http://www.foodieguide.com/iptvsearch/hoteliptv.php');
     // 等待首页的搜索框加载完成并自动提交搜索
-    pushLog('开始搜索地区');
+    pushLog('获取本地设置的地区');
     await handleSearch();
     // 等待搜索结果页面加载完成并获取结果列表
-    pushLog('等待获取地区搜索结果');
     await getSearchResults();
 
     // 处理谷歌广告
@@ -299,7 +321,7 @@ const getChannles = async () => {
     // 不论是否执行成功，重置状态
     systemState = 'WAIT_EXECUTION';
     if (gBrowser) {
-      await gBrowser.close();
+      // await gBrowser.close();
     }
   };
 };
