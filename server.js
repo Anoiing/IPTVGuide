@@ -2,14 +2,11 @@ import cors from 'cors';
 import cron from 'node-cron';
 import express from 'express';
 import fs from 'fs';
-import morgan from 'morgan';
 import puppeteer from 'puppeteer';
 
 const app = express();
-const accessLogStream = fs.createWriteStream('./config/access.log', { flags: 'a' });
 app.use(cors());
 app.use(express.json());
-app.use(morgan('combined', { stream: accessLogStream }));
 
 const response = {
   success: (data) => {
@@ -44,8 +41,6 @@ let systemState = 'NOT_CONFIGURED';
 let seenNames = [];
 // 运行日志
 const runLog = [];
-// 运行错误日志
-let errorLog = '';
 
 // 保存格式化的日志
 const pushLog = (s) => {
@@ -65,9 +60,19 @@ const gTry = (fn) => {
     return fn();
   } catch (error) {
     pushLog(error.message || String(error));
-  } finally {
-    // closeBrowser();
   }
+};
+
+// 获取本地配置
+const getConfig = () => {
+  let systemConfig = {};
+  try {
+    const config = fs.readFileSync('./config/config.json', 'utf8');
+    systemConfig = JSON.parse(config);
+  } catch (error) {
+    pushLog(`获取配置文件失败：${error.message}`);
+  }
+  return systemConfig;
 };
 
 // 启动浏览器
@@ -76,7 +81,7 @@ const runBrowser = async () => {
     if (!gBrowser) {
       gBrowser = await puppeteer.launch({
         devtools: false, // 打开或关闭浏览器的开发者模式
-        headless: false, // 是否以无头模式运行浏览器
+        headless: true, // 是否以无头模式运行浏览器
         timeout: 0, // 超时时间，单位为毫秒
         slowMo: 100, // 放慢速度，单位为毫秒
         ignoreHTTPSErrors: true, // 若访问的是https页面，则忽略https错误
@@ -116,12 +121,7 @@ const goto = async (page, url) => {
 // 等待首页的搜索框加载完成并自动提交搜索
 const handleSearch = async () => {
   await gTry(() => {
-    try {
-      const config = fs.readFileSync('./config/config.json', 'utf8');
-      systemConfig = JSON.parse(config);
-    } catch (error) {
-      return new Error('配置文件不存在!');
-    }
+    systemConfig = getConfig();
     gSearchPage.waitForSelector('input[type="submit"]', { timeout: 300000 }).then(async () => {
       const input = await gSearchPage.$('input[id="search"]');
       await gSearchPage.evaluate((el, area) => {
@@ -205,6 +205,12 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
         await getBestChannleList();
         return;
       } else {
+
+        // 写入组播源地址
+        systemConfig = getConfig();
+        systemConfig.preferredAddress = checkedAddress.address;
+        fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+
         // 源没有失效，获取频道列表
         pushLog(`正在获取地址 ${checkedAddress.address} 下的所有频道...`);
         // 获取分页
@@ -267,6 +273,11 @@ const saveToFile = async (allChannels) => {
     // 保存到本地
     pushLog('获取频道成功，开始生成文件保存到本地...');
 
+    // 写入频道数量
+    systemConfig = getConfig();
+    systemConfig.channels = allChannels.length;
+    fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+
     // 保存到json文件
     await fs.writeFileSync('./output/channels.json', JSON.stringify(allChannels, null, 2));
 
@@ -281,6 +292,9 @@ const saveToFile = async (allChannels) => {
     await fs.writeFileSync('./output/channels.m3u', m3uContent);
     pushLog('m3u文件保存成功');
     pushLog('本次任务执行完成');
+    pushLog('===================');
+
+    systemState = 'WAIT_EXECUTION';
 
     if (gDetailPage) {
       await gDetailPage.close();
@@ -316,14 +330,8 @@ const getChannles = async () => {
 
   } catch (error) {
     errorLog = String(error);
-    console.log(errorLog);
-  } finally {
-    // 不论是否执行成功，重置状态
     systemState = 'WAIT_EXECUTION';
-    if (gBrowser) {
-      // await gBrowser.close();
-    }
-  };
+  }
 };
 
 // ---------------------------------------------------------------------------------------------------------
@@ -331,31 +339,6 @@ const getChannles = async () => {
 /**
  * 以下是提供给前端的接口
  */
-
-// 先初始化加载主搜索页面，减少后续操作时间
-app.get('/init', async (req, res) => {
-  try {
-    const browser = await puppeteer.launch({
-      devtools: true, // 打开或关闭浏览器的开发者模式
-      headless: false, // 是否以无头模式运行浏览器
-      timeout: 300000, // 超时时间，单位为毫秒
-      slowMo: 100, // 放慢速度，单位为毫秒
-      ignoreHTTPSErrors: true, // 若访问的是https页面，则忽略https错误
-    });
-    // 先加载最初的搜索页面
-    const page = await browser.newPage();
-    const r = await page.goto('http://www.foodieguide.com/iptvsearch/hoteliptv.php', { timeout: 300000 });
-    if (r.ok()) {
-      gBrowser = browser;
-      gSearchPage = page;
-      res.send(response.success(true));
-    } else {
-      res.send(response.success(false));
-    }
-  } catch (error) {
-    res.send(response.error(error));
-  }
-});
 
 // 校验cron表达式
 app.get('/verifierCron', async ({ query }, res) => {
@@ -369,15 +352,9 @@ app.get('/verifierCron', async ({ query }, res) => {
 // 获取配置
 app.get('/getConfig', async (req, res) => {
   try {
-    const config = fs.readFileSync('./config/config.json', 'utf8');
-    try {
-      systemConfig = JSON.parse(config);
-      res.send(response.success(systemConfig));
-    } catch (error) {
-      res.send(response.success({}));
-    }
+    res.send(response.success(getConfig()));
   } catch (error) {
-    res.send(response.error(error));
+    res.send(response.success(error));
   }
 });
 
@@ -392,6 +369,7 @@ app.post('/saveConfig', async (req, res) => {
   }
 });
 
+// 获取状态
 app.get('/getStatus', async (req, res) => {
   try {
     if (systemState === 'NOT_CONFIGURED') {
@@ -412,6 +390,7 @@ app.get('/getStatus', async (req, res) => {
   }
 });
 
+// 运行一次任务
 app.get('/runOnce', (req, res) => {
   try {
     pushLog('手动执行一次任务');
@@ -422,12 +401,16 @@ app.get('/runOnce', (req, res) => {
   }
 });
 
+// 取消当前任务
 app.get('/cancel', async (req, res) => {
   try {
-    if (gBrowser) {
-      await gBrowser.close();
-      systemState = 'WAIT_EXECUTION';
+    if (gDetailPage) {
+      await gDetailPage.close();
     }
+    if (gSearchPage) {
+      await gSearchPage.close();
+    }
+    systemState = 'WAIT_EXECUTION';
     pushLog('手动停止执行当前任务');
     res.send(response.success(true));
   } catch (error) {
@@ -435,6 +418,35 @@ app.get('/cancel', async (req, res) => {
   }
 });
 
+// 取消当前任务
+app.get('/getLogs', async (req, res) => {
+  try {
+    let logs = '';
+    try {
+      logs = fs.readFileSync('./config/log.txt', 'utf8');
+    } catch (error) { }
+    res.send(response.success(logs));
+  } catch (error) {
+    res.send(response.error(error));
+  }
+});
+
+// 把当前组播地址加入黑名单
+app.get('/addBlacklist', async ({ query }, res) => {
+  try {
+    systemConfig = getConfig();
+    if (!systemConfig.blaskList) {
+      systemConfig.blaskList = [];
+    }
+    if (!systemConfig.blaskList.includes(query.value)) {
+      systemConfig.blaskList.push(query.value);
+      fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+    }
+    res.send(response.success(true));
+  } catch (error) {
+    res.send(response.error(error));
+  }
+});
 
 const port = 5174;
 app.listen(port, () => {

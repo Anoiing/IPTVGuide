@@ -1,9 +1,5 @@
 import { request } from '@/model';
 
-export const getConfig = async () => {
-  return await request.get('/getConfig');
-};
-
 export const verifierCron = async (value: string) => {
   return await request.get('/verifierCron', { value });
 };

@@ -1,7 +1,7 @@
 {
   "name": "iptvguide",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -28,8 +28,8 @@
     "axios": "^1.7.7",
     "classnames": "^2.5.1",
     "cors": "^2.8.5",
-    "morgan": "^1.10.0",
     "node-cron": "^3.0.3",
-    "querystringify": "^2.2.0"
+    "querystringify": "^2.2.0",
+    "vite-plugin-replace": "^0.1.1"
   }
 }

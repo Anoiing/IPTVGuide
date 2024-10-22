@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { _config, _status, getStatus } from '@/store';
   import { onDestroy, onMount } from 'svelte';
-  import { getStatus, runOnce, cancel } from './model';
+  import { runOnce, cancel } from './model';
 
   const STATUS: any = {
     NOT_CONFIGURED: '未配置',
@@ -8,32 +9,38 @@
     RUNNING: '运行中...',
   };
 
-  let status: string = 'WAIT_EXECUTION';
   let t: any;
+  let status_unsubscribe: any;
 
   onMount(() => {
-    t = window.setInterval(() => {
-      getSystemStatus();
-    }, 3000);
+    getStatus();
+
+    status_unsubscribe = _status.subscribe((v) => {
+      if (v === 'RUNNING') {
+        t = window.setInterval(() => {
+          getStatus();
+        }, 2000);
+      } else {
+        window.clearInterval(t);
+        t = null;
+      }
+    });
   });
 
   onDestroy(() => {
-    window.clearInterval(t);
-    t = undefined;
+    try {
+      status_unsubscribe();
+    } catch (error) {}
   });
-
-  const getSystemStatus = async () => {
-    status = (await getStatus())?.data;
-  };
 
   const handleRunOnce = async () => {
     await runOnce();
-    getSystemStatus();
+    _status.set('RUNNING');
   };
 
   const handleCancel = async () => {
     await cancel();
-    getSystemStatus();
+    getStatus();
   };
 </script>
 
@@ -41,11 +48,11 @@
   <div class="h-44">
     <h1 class="text-xl font-extrabold">当前状态 😎</h1>
     <h3
-      class="py-3 mx-4 my-6 text-lg font-bold leading-10 text-center rounded bg-gray-50"
+      class="py-3 my-6 text-lg font-bold leading-10 text-center rounded bg-gray-50"
     >
-      {STATUS[status] || '获取状态失败'}
+      {STATUS[$_status] || '获取状态失败'}
     </h3>
-    {#if status === 'WAIT_EXECUTION'}
+    {#if $_status === 'WAIT_EXECUTION'}
       <div class="flex justify-center">
         <button
           class="px-8 py-1 text-base text-white rounded bg-indigo-1 hover:bg-indigo-600"
@@ -55,7 +62,7 @@
         </button>
       </div>
     {/if}
-    {#if status === 'RUNNING'}
+    {#if $_status === 'RUNNING'}
       <div class="flex justify-center">
         <button
           class="px-8 py-1 text-base text-white bg-yellow-400 rounded hover:bg-yellow-500"

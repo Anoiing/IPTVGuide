@@ -1,18 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { verifierCron, saveConfig, getConfig } from './model';
+  import { _config, getConfig } from '@/store';
+  import { afterUpdate } from 'svelte';
+  import { verifierCron, saveConfig } from './model';
   import cx from 'classnames';
-  import toast from '@/lib/Toast';
 
   let areaRef: any;
   let cronRef: any;
   let areaError: string = '';
   let cronError: string = '';
+  let feedbackStatus: string = '';
+  let fill: boolean = false;
 
-  onMount(async () => {
-    const { data } = await getConfig();
-    areaRef.value = data.area || '';
-    cronRef.value = data.cron || '';
+  afterUpdate(() => {
+    if (areaRef && cronRef && !fill) {
+      areaRef.value = $_config?.area || '';
+      cronRef.value = $_config?.cron || '';
+    }
   });
 
   const handleSave = async () => {
@@ -33,26 +36,49 @@
       saveConfig({ area: areaRef.value, cron: cronRef.value }).then(
         ({ status, data }) => {
           if (status === 'success' && data) {
-            toast.success('保存成功！');
+            getConfig();
+            feedback('success');
           } else {
-            toast.error('保存失败，请重试！');
+            feedback('error');
           }
         }
       );
     }
   };
+
+  const handleFocus = () => {
+    areaError = '';
+    cronError = '';
+    fill = true;
+  };
+
+  const feedback = (status: 'success' | 'error') => {
+    feedbackStatus = status;
+    window.setTimeout(() => {
+      feedbackStatus = '';
+    }, 3000);
+  };
 </script>
 
 <div class="h-[300px]">
-  <div class="mb-8">
+  <div class="relative flex items-center justify-between mb-8">
     <h1 class="text-xl font-extrabold">配置项 ⚙️</h1>
-  </div>
-  <div class="pl-10 pr-20 ">
-    <div class="flex items-start mb-8">
-      <div class="flex-none w-24 text-lg font-normal leading-10">
-        <b class="mr-1 font-bold text-red-500 ">*</b>省&nbsp;/&nbsp;市：
+    {#if feedbackStatus === 'success'}
+      <div class="absolute -ml-8 text-center text-green-500 left-1/2">
+        保存成功
       </div>
-      <div class="flex flex-col w-full">
+    {:else if feedbackStatus === 'error'}
+      <div class="absolute -ml-8 text-center text-red-500 left-1/2">
+        保存失败，请重试
+      </div>
+    {/if}
+  </div>
+  <div class="flex flex-col items-center justify-center">
+    <div class="flex items-start mb-8 max-w-96">
+      <div class="flex-none w-24 text-lg font-normal leading-10">
+        <b class="mr-1 font-bold text-red-500">*</b>省&nbsp;/&nbsp;市：
+      </div>
+      <div class="flex flex-col flex-1 w-full">
         <input
           bind:this={areaRef}
           class={cx(
@@ -60,18 +86,18 @@
             areaError && 'border-red-500'
           )}
           placeholder="中国省份或市"
-          on:focus={() => (areaError = '')}
+          on:focus={handleFocus}
         />
         {#if areaError}
           <div class="mt-1 text-sm text-red-500">{areaError}</div>
         {/if}
       </div>
     </div>
-    <div class="flex items-start mb-8">
-      <div class="flex-none w-24 text-lg font-normal leading-10 ">
+    <div class="flex items-start mb-8 max-w-96">
+      <div class="flex-none w-24 text-lg font-normal leading-10">
         定时任务：
       </div>
-      <div class="flex flex-col w-full">
+      <div class="flex flex-col flex-1 w-full">
         <input
           bind:this={cronRef}
           class={cx(
@@ -79,7 +105,7 @@
             cronError && 'border-red-500'
           )}
           placeholder="* 2 * * *"
-          on:focus={() => (cronError = '')}
+          on:focus={handleFocus}
         />
         {#if cronError}
           <div class="mt-1 text-sm text-red-500">{cronError}</div>
