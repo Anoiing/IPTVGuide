@@ -41,6 +41,6 @@
 
 <style>
   ._log_wrap {
-    height: calc(100vh - 390px);
+    height: calc(100vh - 408px);
   }
 </style>

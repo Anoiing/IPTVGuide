@@ -11,3 +11,7 @@ export const runOnce = async () => {
 export const cancel = async () => {
   return await request.get('/cancel');
 };
+
+export const addBlacklist = async (value: string) => {
+  return await request.get(`/addBlacklist?value=${value}`);
+};

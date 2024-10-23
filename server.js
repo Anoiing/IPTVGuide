@@ -37,8 +37,6 @@ let gDetailPage = null;
 let systemConfig = {};
 // 运行状态
 let systemState = 'NOT_CONFIGURED';
-// 获取m3u的源名称集合，用于去重
-let seenNames = [];
 // 运行日志
 const runLog = [];
 // 定时任务
@@ -174,8 +172,8 @@ const getSearchResults = async () => {
       }, resultContainer);
 
 
-      // 按存活时间排序，优先选择存活时间最长的
-      resultList.sort((a, b) => b.life - a.life);
+      // 按存活时间排序，优先选择新上线的（存活时间长的不一定就能播放，新上线的可播放概率大）
+      resultList.sort((a, b) => a.life - b.life);
       pushLog('开始优选地址...');
 
       // 开启新页面用于加载详情页
@@ -196,43 +194,49 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
     detailPage.waitForSelector('div.result', { timeout: 300000 }).then(async () => {
       const jugeContents = await detailPage.$('div#content');
       // 判断源是否失效
-      let isFail = await detailPage.evaluate((el) => {
+      const isFail = await detailPage.evaluate((el) => {
         return (el.childElementCount === 1 && el.innerHTML.indexOf('失效') >= 0) || !el.childElementCount;
       }, jugeContents);
-
       if (isFail) {
         pushLog(`地址 ${checkedAddress.address} 已失效，跳过`);
         // 当前源失效直接跳下一个地址
         idx++;
-        await getBestChannleList();
+        await getBestChannleList(resultList, detailPage, idx);
         return;
-      } else {
-
-        // 写入组播源地址
-        systemConfig = getConfig();
-        systemConfig.preferredAddress = checkedAddress.address;
-        fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
-
-        // 源没有失效，获取频道列表
-        pushLog(`正在获取地址 ${checkedAddress.address} 下的所有频道...`);
-        // 获取分页
-        const pagination = await detailPage.$('div#Pagination');
-
-        const pagis = await detailPage.evaluate((el) => {
-          const pagiNodes = el.children;
-          const total = Number(pagiNodes[pagiNodes.length - 2].innerText);
-          const pagis = new Array(total).fill(null);
-          return pagis;
-        }, pagination);
-
-        let allChannels = [];
-        for (let index = 0; index < pagis.length; index++) {
-          const channels = await getPaginatedChannels(detailPage, index);
-          allChannels = allChannels.concat(channels);
-        }
-        saveToFile(allChannels);
-        return true;
       }
+      // 判断源是否在黑名单中
+      systemConfig = getConfig();
+      if (systemConfig.blaskList && systemConfig.blaskList.includes(checkedAddress.address)) {
+        pushLog(`地址 ${checkedAddress.address} 已在黑名单中，跳过`);
+        idx++;
+        await getBestChannleList(resultList, detailPage, idx);
+        return;
+      }
+
+
+      // 写入组播源地址
+      systemConfig.preferredAddress = checkedAddress.address;
+      fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+
+      // 源没有失效，获取频道列表
+      pushLog(`正在获取地址 ${checkedAddress.address} 下的所有频道...`);
+      // 获取分页
+      const pagination = await detailPage.$('div#Pagination');
+
+      const pagis = await detailPage.evaluate((el) => {
+        const pagiNodes = el.children;
+        const total = Number(pagiNodes[pagiNodes.length - 2].innerText);
+        const pagis = new Array(total).fill(null);
+        return pagis;
+      }, pagination);
+
+      let allChannels = [];
+      for (let index = 0; index < pagis.length; index++) {
+        const channels = await getPaginatedChannels(detailPage, index);
+        allChannels = allChannels.concat(channels);
+      }
+      saveToFile(allChannels);
+      return true;
     });
   });
 }
@@ -241,7 +245,7 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
 const getPaginatedChannels = async (detailPage, index) => {
   return await gTry(async () => {
     const tempPagination = await detailPage.$('div#Pagination');
-    const currentPageChannels = await detailPage.evaluate((el, idx, seenNames) => {
+    const currentPageChannels = await detailPage.evaluate((el, idx) => {
       // 点击对应的页码
       const targetEle = Array.from(el.children).find((pele) => pele.innerText === String(idx + 1));
       targetEle.click();
@@ -252,19 +256,14 @@ const getPaginatedChannels = async (detailPage, index) => {
         const child = contents.children[index];
         // 过滤第一个标题节点和中间的广告节点
         if (child.childElementCount === 2) {
-          // 按名称去重
-          const name = child.children[0].innerText.trim().replace(/高清$/, '');
-          if (!seenNames.includes(name)) {
-            channels.push({
-              name,
-              url: child.children[1].innerText.trim(),
-            });
-            seenNames.push(name);
-          }
+          channels.push({
+            name: child.children[0].innerText.trim(),
+            url: child.children[1].innerText.trim(),
+          });
         }
       }
       return channels;
-    }, tempPagination, index, seenNames);
+    }, tempPagination, index);
     return currentPageChannels;
   });
 };
@@ -312,7 +311,6 @@ const getChannles = async () => {
   pushLog('-------------------');
   pushLog('开始执行任务');
   systemState = 'RUNNING';
-  seenNames = [];
   try {
     // 启动浏览器
     pushLog('开始浏览器进程');
@@ -342,7 +340,7 @@ const getChannles = async () => {
  * 以下是提供给前端的接口
  */
 
-app.get('/initTask', async ({ query }, res) => {
+app.get('/initTask', async (req, res) => {
   try {
     systemConfig = getConfig();
     if (systemConfig.cron) {
@@ -355,7 +353,7 @@ app.get('/initTask', async ({ query }, res) => {
         pushLog('===================');
         pushLog('自动执行一次任务');
         getChannles();
-      });
+      }, { timezone: 'Asia/Shanghai' });
     }
     res.send(response.success(true));
   } catch (error) {
@@ -385,7 +383,9 @@ app.get('/getConfig', async (req, res) => {
 // 保存配置
 app.post('/saveConfig', async (req, res) => {
   try {
-    fs.writeFileSync('./config/config.json', JSON.stringify(req.body));
+    systemConfig = getConfig();
+    systemConfig = { ...systemConfig, ...req.body }
+    fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
     systemState = 'WAIT_EXECUTION';
     // 先停止原来的定时任务
     if (task) {
@@ -397,7 +397,6 @@ app.post('/saveConfig', async (req, res) => {
       pushLog('自动执行一次任务');
       getChannles();
     }, { timezone: 'Asia/Shanghai' });
-    console.log(task)
     res.send(response.success(true));
   } catch (error) {
     res.send(response.error(error));
@@ -478,6 +477,8 @@ app.get('/addBlacklist', async ({ query }, res) => {
     }
     if (!systemConfig.blaskList.includes(query.value)) {
       systemConfig.blaskList.push(query.value);
+      systemConfig.preferredAddress = '';
+      systemConfig.channels = 0;
       fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
     }
     res.send(response.success(true));

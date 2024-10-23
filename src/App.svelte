@@ -10,20 +10,14 @@
 
 <Layout>
   <Welcome />
-  <div class="grid grid-cols-12 md:divide-x _container">
+  <div class="md:grid md:grid-cols-12 md:divide-x">
     <div class="col-span-12 px-8 py-4 md:col-span-7">
       <ConfigForm />
-      <Execution />
+      <ScrapingResults />
     </div>
     <div class="col-span-12 px-8 py-4 md:col-span-5">
-      <ScrapingResults />
+      <Execution />
       <MainLogs />
     </div>
   </div>
 </Layout>
-
-<style>
-  ._container {
-    height: calc(100% - 110px);
-  }
-</style>

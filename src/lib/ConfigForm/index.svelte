@@ -60,8 +60,8 @@
   };
 </script>
 
-<div class="h-[300px]">
-  <div class="relative flex items-center justify-between mb-8">
+<div>
+  <div class="relative flex items-center justify-between mb-4">
     <h1 class="text-xl font-extrabold">配置项 ⚙️</h1>
     {#if feedbackStatus === 'success'}
       <div class="absolute -ml-8 text-center text-green-500 left-1/2">
@@ -73,8 +73,8 @@
       </div>
     {/if}
   </div>
-  <div class="flex flex-col items-center justify-center">
-    <div class="flex items-start mb-8 max-w-96">
+  <div class="flex flex-col items-center justify-center mb-4">
+    <div class="flex items-start mb-4 max-w-96">
       <div class="flex-none w-24 text-lg font-normal leading-10">
         <b class="mr-1 font-bold text-red-500">*</b>省&nbsp;/&nbsp;市：
       </div>
@@ -93,7 +93,7 @@
         {/if}
       </div>
     </div>
-    <div class="flex items-start mb-8 max-w-96">
+    <div class="flex items-start mb-4 max-w-96">
       <div class="flex-none w-24 text-lg font-normal leading-10">
         定时任务：
       </div>
@@ -115,7 +115,7 @@
 
     <div class="flex justify-center">
       <button
-        class="px-8 py-1 text-lg text-white rounded bg-indigo-1 hover:bg-indigo-600"
+        class="px-8 py-1 text-base text-white rounded bg-indigo-1 hover:bg-indigo-600"
         on:click={handleSave}
       >
         保&nbsp;&nbsp;存
