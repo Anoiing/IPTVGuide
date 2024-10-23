@@ -3,7 +3,9 @@ import cron from 'node-cron';
 import express from 'express';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -42,16 +44,20 @@ const runLog = [];
 // 定时任务
 let task = null;
 
+const CONFIG_DIR = process.env.config || './config';
+const OUT_DIR = process.env.output || './output';
+const TZ = process.env.TZ || 'Asia/Shanghai';
+
 // 保存格式化的日志
 const pushLog = (s) => {
   const l = `${(new Date().toString()).replace('GMT+0800 (中国标准时间)', '')}  ${s}`;
   runLog.push(l);
   let originLog = '';
   try {
-    originLog = fs.readFileSync('./config/log.txt', 'utf8');
+    originLog = fs.readFileSync(`${CONFIG_DIR}/log.txt`, 'utf8');
   } catch (error) { }
   const newLog = `${l}\n${originLog}`;
-  fs.writeFileSync('./config/log.txt', newLog);
+  fs.writeFileSync(`${CONFIG_DIR}/log.txt`, newLog);
   console.log(l);
 };
 
@@ -67,7 +73,7 @@ const gTry = (fn) => {
 const getConfig = () => {
   let systemConfig = {};
   try {
-    const config = fs.readFileSync('./config/config.json', 'utf8');
+    const config = fs.readFileSync(`${CONFIG_DIR}/config.json`, 'utf8');
     systemConfig = JSON.parse(config);
   } catch (error) {
     pushLog(`获取配置文件失败：${error.message}`);
@@ -216,7 +222,7 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
 
       // 写入组播源地址
       systemConfig.preferredAddress = checkedAddress.address;
-      fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+      fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
 
       // 源没有失效，获取频道列表
       pushLog(`正在获取地址 ${checkedAddress.address} 下的所有频道...`);
@@ -277,20 +283,20 @@ const saveToFile = async (allChannels) => {
     // 写入频道数量
     systemConfig = getConfig();
     systemConfig.channels = allChannels.length;
-    fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+    fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
 
     // 保存到json文件
-    await fs.writeFileSync('./output/channels.json', JSON.stringify(allChannels, null, 2));
+    await fs.writeFileSync(`${OUT_DIR}/channels.json`, JSON.stringify(allChannels, null, 2));
 
     // 保存到txt文件
     const txtContent = allChannels.map((channel) => `${channel.name},${channel.name}\n${channel.url}`).join('\n');
-    await fs.writeFileSync('./output/channels.txt', txtContent);
+    await fs.writeFileSync(`${OUT_DIR}/channels.txt`, txtContent);
     pushLog('txt文件保存成功');
 
     // 生成m3u文件
     let m3uContent = '#EXTM3U x-tvg-url="https://live.fanmingming.com/e.xml"\n';
     m3uContent += allChannels.map((channel) => `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="",${channel.name}\n${channel.url}`).join('\n');
-    await fs.writeFileSync('./output/channels.m3u', m3uContent);
+    await fs.writeFileSync(`${OUT_DIR}/channels.m3u`, m3uContent);
     pushLog('m3u文件保存成功');
     pushLog('本次任务执行完成');
 
@@ -353,7 +359,7 @@ app.get('/initTask', async (req, res) => {
         pushLog('===================');
         pushLog('自动执行一次任务');
         getChannles();
-      }, { timezone: 'Asia/Shanghai' });
+      }, { timezone: TZ });
     }
     res.send(response.success(true));
   } catch (error) {
@@ -385,7 +391,7 @@ app.post('/saveConfig', async (req, res) => {
   try {
     systemConfig = getConfig();
     systemConfig = { ...systemConfig, ...req.body }
-    fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+    fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
     systemState = 'WAIT_EXECUTION';
     // 先停止原来的定时任务
     if (task) {
@@ -396,7 +402,7 @@ app.post('/saveConfig', async (req, res) => {
       pushLog('===================');
       pushLog('自动执行一次任务');
       getChannles();
-    }, { timezone: 'Asia/Shanghai' });
+    }, { timezone: TZ });
     res.send(response.success(true));
   } catch (error) {
     res.send(response.error(error));
@@ -409,7 +415,7 @@ app.get('/getStatus', async (req, res) => {
     if (systemState === 'NOT_CONFIGURED') {
       let config = {};
       try {
-        config = JSON.parse(fs.readFileSync('./config/config.json', 'utf8'));
+        config = JSON.parse(fs.readFileSync(`${CONFIG_DIR}/config.json`, 'utf8'));
       } catch (error) { }
       // 没有配置项，返回未配置状态
       if (!config.cron) {
@@ -458,7 +464,7 @@ app.get('/getLogs', async (req, res) => {
   try {
     let logs = '';
     try {
-      const allLogs = fs.readFileSync('./config/log.txt', 'utf8');
+      const allLogs = fs.readFileSync(`${CONFIG_DIR}/log.txt`, 'utf8');
       const lines = allLogs.split('\n');
       logs = lines.slice(0, 100).join('\n');
     } catch (error) { }
@@ -479,7 +485,7 @@ app.get('/addBlacklist', async ({ query }, res) => {
       systemConfig.blaskList.push(query.value);
       systemConfig.preferredAddress = '';
       systemConfig.channels = 0;
-      fs.writeFileSync('./config/config.json', JSON.stringify(systemConfig));
+      fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
     }
     res.send(response.success(true));
   } catch (error) {
