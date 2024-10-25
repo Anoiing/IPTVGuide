@@ -338,7 +338,7 @@ const getChannles = async () => {
     // gSearchPage.waitForSelector();
 
   } catch (error) {
-    errorLog = String(error);
+    pushLog(error.message);
     systemState = 'WAIT_EXECUTION';
   }
 };
