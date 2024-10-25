@@ -6,7 +6,7 @@ export const _status = writable<string>('');
 export const _logs = writable<string>('');
 
 export const getConfig = () => {
-  request.get('/getConfig').then(({ data }) => {
+  request.get('/api/getConfig').then(({ data }) => {
     _config.set(data);
     if (!data?.area) {
       _status.set('NOT_CONFIGURED');
@@ -15,13 +15,13 @@ export const getConfig = () => {
 };
 
 export const getStatus = () => {
-  request.get('/getStatus').then(({ data }) => {
+  request.get('/api/getStatus').then(({ data }) => {
     _status.set(data);
   });
 };
 
 export const getLogs = () => {
-  request.get('/getLogs').then(({ data }) => {
+  request.get('/api/getLogs').then(({ data }) => {
     _logs.set(data);
   });
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { _config, getConfig } from '@/store';
+  import { _config, getConfig, getStatus } from '@/store';
   import { afterUpdate } from 'svelte';
   import { verifierCron, saveConfig } from './model';
   import cx from 'classnames';
@@ -37,6 +37,7 @@
         ({ status, data }) => {
           if (status === 'success' && data) {
             getConfig();
+            getStatus();
             feedback('success');
           } else {
             feedback('error');

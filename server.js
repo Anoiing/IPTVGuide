@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 const app = express();
+app.use(express.static('dist'));
 app.use(cors());
 app.use(express.json());
 
@@ -44,8 +45,10 @@ const runLog = [];
 // 定时任务
 let task = null;
 
-const CONFIG_DIR = process.env.config || './config';
-const OUT_DIR = process.env.output || './output';
+console.log(process.env)
+
+const CONFIG_DIR = process.env.CONFIG_DIR || './config';
+const OUT_DIR = process.env.OUT_DIR || './output';
 const TZ = process.env.TZ || 'Asia/Shanghai';
 
 // 保存格式化的日志
@@ -346,7 +349,7 @@ const getChannles = async () => {
  * 以下是提供给前端的接口
  */
 
-app.get('/initTask', async (req, res) => {
+app.get('/api/initTask', async (req, res) => {
   try {
     systemConfig = getConfig();
     if (systemConfig.cron) {
@@ -369,7 +372,7 @@ app.get('/initTask', async (req, res) => {
 
 
 // 校验cron表达式
-app.get('/verifierCron', async ({ query }, res) => {
+app.get('/api/verifierCron', async ({ query }, res) => {
   try {
     res.send(response.success(cron.validate(query.value)));
   } catch (error) {
@@ -378,7 +381,7 @@ app.get('/verifierCron', async ({ query }, res) => {
 });
 
 // 获取配置
-app.get('/getConfig', async (req, res) => {
+app.get('/api/getConfig', async (req, res) => {
   try {
     res.send(response.success(getConfig()));
   } catch (error) {
@@ -387,7 +390,7 @@ app.get('/getConfig', async (req, res) => {
 });
 
 // 保存配置
-app.post('/saveConfig', async (req, res) => {
+app.post('/api/saveConfig', async (req, res) => {
   try {
     systemConfig = getConfig();
     systemConfig = { ...systemConfig, ...req.body }
@@ -410,7 +413,7 @@ app.post('/saveConfig', async (req, res) => {
 });
 
 // 获取状态
-app.get('/getStatus', async (req, res) => {
+app.get('/api/getStatus', async (req, res) => {
   try {
     if (systemState === 'NOT_CONFIGURED') {
       let config = {};
@@ -431,7 +434,7 @@ app.get('/getStatus', async (req, res) => {
 });
 
 // 运行一次任务
-app.get('/runOnce', (req, res) => {
+app.get('/api/runOnce', (req, res) => {
   try {
     pushLog('===================');
     pushLog('手动执行一次任务');
@@ -443,7 +446,7 @@ app.get('/runOnce', (req, res) => {
 });
 
 // 取消当前任务
-app.get('/cancel', async (req, res) => {
+app.get('/api/cancel', async (req, res) => {
   try {
     if (gDetailPage) {
       await gDetailPage.close();
@@ -460,7 +463,7 @@ app.get('/cancel', async (req, res) => {
 });
 
 // 取消当前任务
-app.get('/getLogs', async (req, res) => {
+app.get('/api/getLogs', async (req, res) => {
   try {
     let logs = '';
     try {
@@ -475,7 +478,7 @@ app.get('/getLogs', async (req, res) => {
 });
 
 // 把当前组播地址加入黑名单
-app.get('/addBlacklist', async ({ query }, res) => {
+app.get('/api/addBlacklist', async ({ query }, res) => {
   try {
     systemConfig = getConfig();
     if (!systemConfig.blaskList) {

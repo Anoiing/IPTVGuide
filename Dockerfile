@@ -1,17 +1,27 @@
 FROM node:18
 
-WORKDIR .
+# 设置工作目录
+WORKDIR /app
 
-COPY package.json .
+# 复制前端和后端文件
+COPY ./dist ./dist
+COPY ./server.js .
+COPY ./ecosystem.config.cjs .
+COPY ./entrypoint.sh .
+COPY ./package.server.json ./package.json
 
-RUN pnpm install
+# 安装依赖
+RUN npm i pm2 -g
+RUN yarn install
+RUN mkdir -p config
+RUN mkdir -p output
 
-COPY . .
 
-EXPOSE 5173 5174
+# 暴露端口 5174
+EXPOSE 5174
 
-ENV CONFIG_DIR=/config
-ENV OUT_DIR=/output
-ENV TZ=Asia/Shanghai
+# 设置环境变量
+ENV TZ="Asia/Shanghai"
 
-CMD ["npm", "run", "dev", "&&", "node", "server.js"]
+# 设置容器启动时执行的命令或脚本
+ENTRYPOINT ["./entrypoint.sh"]
