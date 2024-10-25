@@ -1,7 +1,13 @@
 <script lang="ts">
-  import { _config, getConfig, getStatus } from '@/store';
+  import { _config, _status } from '@/store';
   import { afterUpdate } from 'svelte';
-  import { verifierCron, saveConfig } from './model';
+  import {
+    verifierCron,
+    saveConfig,
+    getConfig,
+    getStatus,
+    runOnce,
+  } from '@/model';
   import cx from 'classnames';
 
   let areaRef: any;
@@ -39,6 +45,10 @@
             getConfig();
             getStatus();
             feedback('success');
+            window.setTimeout(() => {
+              runOnce();
+              _status.set('RUNNING');
+            }, 1000);
           } else {
             feedback('error');
           }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { _logs, _status, getLogs } from '@/store';
+  import { _logs, _status } from '@/store';
+  import { getLogs } from '@/model';
 
   let t: any = null;
   let status_unsubscribe: any;

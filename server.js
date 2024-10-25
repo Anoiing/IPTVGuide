@@ -45,8 +45,6 @@ const runLog = [];
 // 定时任务
 let task = null;
 
-console.log(process.env)
-
 const CONFIG_DIR = process.env.CONFIG_DIR || './config';
 const OUT_DIR = process.env.OUT_DIR || './output';
 const TZ = process.env.TZ || 'Asia/Shanghai';
@@ -79,7 +77,9 @@ const getConfig = () => {
     const config = fs.readFileSync(`${CONFIG_DIR}/config.json`, 'utf8');
     systemConfig = JSON.parse(config);
   } catch (error) {
-    pushLog(`获取配置文件失败：${error.message}`);
+    if (error.message.indexOf('no such file') < 0) {
+      pushLog(`获取配置文件失败：${error.message}`);
+    }
   }
   return systemConfig;
 };
@@ -107,7 +107,7 @@ const closeBrowser = async () => {
 };
 
 
-const maxRetries = 3;
+const maxRetries = 5;
 let retries = 0;
 // 带3次重试的打开指定页面
 const goto = async (page, url) => {
@@ -118,7 +118,7 @@ const goto = async (page, url) => {
     } catch (error) {
       if (error.message.indexOf('timeout') > -1 || error.message.indexOf('ERR_TIMED_OUT') > -1) {
         retries++;
-        pushLog(`${url} 页面加载超时，重试 ${retries} 次`);
+        pushLog(`加载超时，重试 ${retries} 次`);
       } else {
         pushLog(error.message);
       }
@@ -490,6 +490,16 @@ app.get('/api/addBlacklist', async ({ query }, res) => {
       systemConfig.channels = 0;
       fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
     }
+    res.send(response.success(true));
+  } catch (error) {
+    res.send(response.error(error));
+  }
+});
+
+// 清空日志
+app.get('/api/clearLog', async (req, res) => {
+  try {
+    fs.writeFileSync(`${CONFIG_DIR}/log.txt`, '');
     res.send(response.success(true));
   } catch (error) {
     res.send(response.error(error));

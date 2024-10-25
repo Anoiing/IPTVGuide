@@ -1,6 +1,15 @@
 <script lang="ts">
-  import { _config, _status, getConfig, getStatus } from '@/store';
-  import { cancel, initTask, runOnce, addBlacklist } from './model';
+  import { _config, _status } from '@/store';
+  import {
+    cancel,
+    initTask,
+    runOnce,
+    addBlacklist,
+    clearLog,
+    getConfig,
+    getStatus,
+    getLogs,
+  } from '@/model';
   import { onMount } from 'svelte';
 
   let feedbackStatus: string = '';
@@ -36,6 +45,11 @@
     window.setTimeout(() => {
       feedbackStatus = '';
     }, 3000);
+  };
+
+  const handleClearLog = async () => {
+    await clearLog();
+    getLogs();
   };
 </script>
 
@@ -98,5 +112,14 @@
         </div>
       </div>
     {/if}
+    <div class="flex flex-col items-center">
+      <button
+        class="px-8 py-1 text-base text-white rounded bg-slate-400 hover:bg-slate-600"
+        on:click={handleClearLog}
+      >
+        清空日志
+      </button>
+      <div class="mt-4 text-xs text-slate-400">清空所有的执行日志</div>
+    </div>
   </div>
 </div>

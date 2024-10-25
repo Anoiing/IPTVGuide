@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { _config, _status, getStatus, getConfig } from '@/store';
+  import { _config, _status } from '@/store';
+  import { getStatus, getConfig } from '@/model';
   import { onDestroy, onMount } from 'svelte';
 
   const STATUS: any = {

@@ -13,6 +13,7 @@ dist-ssr
 *.local
 output
 config
+pnpm-lock.yaml
 
 # Editor directories and files
 .vscode/*
