@@ -1,8 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [],
+  content: ["./src/**/*.{html,js,ts,svelte}"],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'indigo-1': '#6c63ff'
+      }
+    },
   },
   plugins: [],
 }
