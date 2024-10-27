@@ -1,4 +1,6 @@
-ARG arch
+# docker build --build-arg arch=amd64 -t iptvguide:latest "."
+
+ARG arch='amd'
 FROM --platform=linux/${arch} node:18
 
 RUN apt-get update --fix-missing && apt-get install -y \
