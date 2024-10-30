@@ -5,9 +5,6 @@ ARG arch='amd64'
 # 使用Node.js的官方Docker镜像作为基础镜像  
 FROM --platform=linux/${arch} node:18-alpine
 
-# 打包前端
-RUN npm run build
-
 # 设置环境变量，以便 puppeteer 可以下载正确的 Chromium 版本  
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true  
 ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/chromium-browser  
@@ -25,6 +22,7 @@ RUN apk add --no-cache \
     make \  
     python3 \  
     && npm install -g npm
+
 # 设置工作目录
 WORKDIR /app
 
@@ -36,9 +34,10 @@ COPY ./entrypoint.sh /app
 COPY ./package.server.json /app/package.json
 
 # 安装依赖
-RUN npm i pm2 --registry=https://registry.npmmirror.com
+# RUN npm i pm2 --registry=https://registry.npmmirror.com
 RUN yarn
-# RUN PUPPETEER_PRODUCT=chrome yarn install
+
+# 预创建文件夹，防止读不到报错
 RUN mkdir -p config
 RUN mkdir -p output
 

@@ -94,6 +94,7 @@ const runBrowser = async () => {
         timeout: 0, // 超时时间，单位为毫秒
         slowMo: 100, // 放慢速度，单位为毫秒
         ignoreHTTPSErrors: true, // 若访问的是https页面，则忽略https错误
+        args: ['--no-sandbox'] // 添加启动参数
       });
     }
   });
