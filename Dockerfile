@@ -20,8 +20,7 @@ RUN apk add --no-cache \
     gcc \  
     g++ \  
     make \  
-    python3 \  
-    && npm install -g npm
+    python3
 
 # 设置工作目录
 WORKDIR /app
@@ -35,7 +34,7 @@ COPY ./package.server.json /app/package.json
 
 # 安装依赖
 # RUN npm i pm2 --registry=https://registry.npmmirror.com
-RUN yarn
+RUN npm install --registry=https://registry.npmmirror.com
 
 # 预创建文件夹，防止读不到报错
 RUN mkdir -p config

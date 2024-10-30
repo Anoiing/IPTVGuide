@@ -95,6 +95,7 @@ const runBrowser = async () => {
         slowMo: 100, // 放慢速度，单位为毫秒
         ignoreHTTPSErrors: true, // 若访问的是https页面，则忽略https错误
         args: ['--no-sandbox'] // 添加启动参数
+        // https://issues.chromium.org/issues/40480798  在docker中以root权限运行要加参数，否则浏览器会崩溃
       });
     }
   });
