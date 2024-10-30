@@ -1,15 +1,17 @@
-# docker buildx build --build-arg arch=amd64 -t iptvguide:latest "." --builder x86builder --load
-# docker buildx build --build-arg arch=amd64 -t iptvguide:latest "."
+# docker build --build-arg arch=amd64 -t iptvguide:latest "."
 # docker save -o /Users/anoiv/desktop/iptvguide.tar iptvguide
 
 ARG arch='amd64'
 # 使用Node.js的官方Docker镜像作为基础镜像  
 FROM --platform=linux/${arch} node:18-alpine
-  
+
+# 打包前端
+RUN npm run build
+
 # 设置环境变量，以便 puppeteer 可以下载正确的 Chromium 版本  
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true  
 ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/chromium-browser  
-  
+
 # 安装必要的依赖  
 RUN apk add --no-cache \  
     chromium \  
@@ -18,7 +20,6 @@ RUN apk add --no-cache \
     harfbuzz \  
     ca-certificates \  
     ttf-freefont \  
-    node-gyp \  
     gcc \  
     g++ \  
     make \  
@@ -48,5 +49,6 @@ EXPOSE 5174
 ENV TZ="Asia/Shanghai"
 
 # 设置容器启动时执行的命令或脚本
-# ENTRYPOINT ["./entrypoint.sh"]
-CMD ["pm2-runtime start ecosystem.config.cjs"]
+# ENTRYPOINT ["/app/entrypoint.sh"]
+# CMD ["pm2-runtime start ecosystem.config.cjs"]
+CMD ["node", "server.js"]
