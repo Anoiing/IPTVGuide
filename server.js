@@ -190,16 +190,17 @@ const getSearchResults = async () => {
       // 开启新页面用于加载详情页
       let idx = 0;
       gDetailPage = await gBrowser.newPage();
-      getBestChannleList(resultList, gDetailPage, idx);
+      getBestChannelList(resultList, gDetailPage, idx);
     });
   });
 };
 
 // 获取最佳的频道列表
-const getBestChannleList = async (resultList, detailPage, idx) => {
+const getBestChannelList = async (resultList, detailPage, idx) => {
   await gTry(async () => {
     const checkedAddress = resultList[idx];
     pushLog(`检查地址：${checkedAddress.address}`);
+    retries = 0;
     await goto(detailPage, checkedAddress.href);
 
     detailPage.waitForSelector('div.result', { timeout: 300000 }).then(async () => {
@@ -212,15 +213,15 @@ const getBestChannleList = async (resultList, detailPage, idx) => {
         pushLog(`地址 ${checkedAddress.address} 已失效，跳过`);
         // 当前源失效直接跳下一个地址
         idx++;
-        await getBestChannleList(resultList, detailPage, idx);
+        await getBestChannelList(resultList, detailPage, idx);
         return;
       }
       // 判断源是否在黑名单中
       systemConfig = getConfig();
-      if (systemConfig.blaskList && systemConfig.blaskList.includes(checkedAddress.address)) {
+      if (systemConfig.blackList && systemConfig.blackList.includes(checkedAddress.address)) {
         pushLog(`地址 ${checkedAddress.address} 已在黑名单中，跳过`);
         idx++;
-        await getBestChannleList(resultList, detailPage, idx);
+        await getBestChannelList(resultList, detailPage, idx);
         return;
       }
 
@@ -318,7 +319,7 @@ const saveToFile = async (allChannels) => {
 
 
 // 获取频道数据的主入口方法
-const getChannles = async () => {
+const getChannels = async () => {
   pushLog('-------------------');
   pushLog('开始执行任务');
   systemState = 'RUNNING';
@@ -329,6 +330,7 @@ const getChannles = async () => {
     // 打开指定搜索页面
     pushLog('打开并获取搜索页面');
     gSearchPage = await gBrowser.newPage();
+    retries = 0;
     await goto(gSearchPage, 'http://www.foodieguide.com/iptvsearch/hoteliptv.php');
     // 等待首页的搜索框加载完成并自动提交搜索
     pushLog('获取本地设置的地区');
@@ -363,7 +365,7 @@ app.get('/api/initTask', async (req, res) => {
       task = cron.schedule(req.body.cron, () => {
         pushLog('===================');
         pushLog('自动执行一次任务');
-        getChannles();
+        getChannels();
       }, { timezone: TZ });
     }
     res.send(response.success(true));
@@ -406,7 +408,7 @@ app.post('/api/saveConfig', async (req, res) => {
     task = cron.schedule(req.body.cron, () => {
       pushLog('===================');
       pushLog('自动执行一次任务');
-      getChannles();
+      getChannels();
     }, { timezone: TZ });
     res.send(response.success(true));
   } catch (error) {
@@ -440,7 +442,7 @@ app.get('/api/runOnce', (req, res) => {
   try {
     pushLog('===================');
     pushLog('手动执行一次任务');
-    getChannles();
+    getChannels();
     res.send(response.success(true));
   } catch (error) {
     res.send(response.error(error));
@@ -483,11 +485,11 @@ app.get('/api/getLogs', async (req, res) => {
 app.get('/api/addBlacklist', async ({ query }, res) => {
   try {
     systemConfig = getConfig();
-    if (!systemConfig.blaskList) {
-      systemConfig.blaskList = [];
+    if (!systemConfig.blackList) {
+      systemConfig.blackList = [];
     }
-    if (!systemConfig.blaskList.includes(query.value)) {
-      systemConfig.blaskList.push(query.value);
+    if (!systemConfig.blackList.includes(query.value)) {
+      systemConfig.blackList.push(query.value);
       systemConfig.preferredAddress = '';
       systemConfig.channels = 0;
       fs.writeFileSync(`${CONFIG_DIR}/config.json`, JSON.stringify(systemConfig));
