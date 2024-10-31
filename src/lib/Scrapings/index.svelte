@@ -85,7 +85,7 @@
         >
           手动运行
         </button>
-        <div class="mt-4 text-xs text-slate-400">立即手动触发一次执行任务</div>
+        <div class="mt-2 mb-4 text-xs text-slate-400">立即手动触发一次执行任务</div>
       </div>
     {/if}
     {#if $_status === 'RUNNING'}
@@ -96,7 +96,7 @@
         >
           停止运行
         </button>
-        <div class="mt-4 text-xs text-slate-400">立即取消当前执行中的任务</div>
+        <div class="mt-2 mb-4 text-xs text-slate-400">立即取消当前执行中的任务</div>
       </div>
     {/if}
     {#if $_config.preferredAddress}
@@ -107,7 +107,7 @@
         >
           加入黑名单
         </button>
-        <div class="mt-4 text-xs text-slate-400">
+        <div class="mt-2 mb-4 text-xs text-slate-400">
           将当前结果地址加入黑名单并立即重新执行一次任务
         </div>
       </div>
@@ -119,7 +119,7 @@
       >
         清空日志
       </button>
-      <div class="mt-4 text-xs text-slate-400">清空所有的执行日志</div>
+      <div class="mt-2 mb-4 text-xs text-slate-400">清空所有的执行日志</div>
     </div>
   </div>
 </div>
