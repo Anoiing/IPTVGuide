@@ -1,5 +1,7 @@
-# docker build --build-arg arch=amd64 -t iptvguide:latest "."
+# docker build --build-arg arch=amd64 -t iptvguide:版本号 "."
 # docker save -o /Users/anoiv/desktop/iptvguide.tar iptvguide
+# docker tag iptvguide:版本号 anoiv/iptvguide:latest
+# docker push anoiv/iptvguide:latest
 
 ARG arch='amd64'
 # 使用Node.js的官方Docker镜像作为基础镜像  
@@ -28,13 +30,14 @@ WORKDIR /app
 # 复制前端和后端文件
 COPY ./dist /app/dist
 COPY ./server.js /app
-COPY ./ecosystem.config.cjs /app
 COPY ./entrypoint.sh /app
 COPY ./package.server.json /app/package.json
+COPY ./README.md /app/README.md
+# COPY ./ecosystem.config.cjs /app
 
 # 安装依赖
-# RUN npm i pm2 --registry=https://registry.npmmirror.com
 RUN npm install --registry=https://registry.npmmirror.com
+# RUN npm i pm2 --registry=https://registry.npmmirror.com
 
 # 预创建文件夹，防止读不到报错
 RUN mkdir -p config
@@ -47,6 +50,6 @@ EXPOSE 5174
 ENV TZ="Asia/Shanghai"
 
 # 设置容器启动时执行的命令或脚本
+CMD ["node", "server.js"]
 # ENTRYPOINT ["/app/entrypoint.sh"]
 # CMD ["pm2-runtime start ecosystem.config.cjs"]
-CMD ["node", "server.js"]
