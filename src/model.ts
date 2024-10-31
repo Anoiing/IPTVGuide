@@ -62,7 +62,7 @@ export const cancel = async () => {
 };
 
 export const addBlacklist = async (value: string) => {
-  return await request.get(`/addBlacklist?value=${value}`);
+  return await request.get(`/api/addBlacklist?value=${value}`);
 };
 
 export const clearLog = async () => {
