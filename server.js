@@ -108,6 +108,17 @@ const closeBrowser = async () => {
   }
 };
 
+// url地址过滤
+const urlInterceptor = (request) => {
+  // 一些广告和数据分析的站点请求直接取消掉提高运行效率
+  const blockList = ['google', 'dtscdn.com', 'dtscout.com', 'dtsan.net', 'histats.com'];
+  const url = request.url();
+  if (request.resourceType() === 'image' || blockList.some((uri) => url.indexOf(uri) > -1)) {
+    request.abort();
+  } else {
+    request.continue();
+  }
+}
 
 const maxRetries = 5;
 let retries = 0;
@@ -190,6 +201,8 @@ const getSearchResults = async () => {
       // 开启新页面用于加载详情页
       let idx = 0;
       gDetailPage = await gBrowser.newPage();
+      gDetailPage.setRequestInterception(true);
+      gDetailPage.on('request', urlInterceptor);
       getBestChannelList(resultList, gDetailPage, idx);
     });
   });
@@ -331,16 +344,14 @@ const getChannels = async () => {
     pushLog('打开并获取搜索页面');
     gSearchPage = await gBrowser.newPage();
     retries = 0;
+    gSearchPage.setRequestInterception(true);
+    gSearchPage.on('request', urlInterceptor);
     await goto(gSearchPage, 'http://www.foodieguide.com/iptvsearch/hoteliptv.php');
     // 等待首页的搜索框加载完成并自动提交搜索
     pushLog('获取本地设置的地区');
     await handleSearch();
     // 等待搜索结果页面加载完成并获取结果列表
     await getSearchResults();
-
-    // 处理谷歌广告
-    // gSearchPage.waitForSelector();
-
   } catch (error) {
     pushLog(error.message);
     systemState = 'WAIT_EXECUTION';
