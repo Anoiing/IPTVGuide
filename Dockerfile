@@ -33,7 +33,7 @@ COPY ./server.js /app
 COPY ./entrypoint.sh /app
 COPY ./package.server.json /app/package.json
 COPY ./README.md /app/README.md
-COPY ./ecosystem.config.cjs /app/ecosystem.config.cjs
+# COPY ./ecosystem.config.cjs /app/ecosystem.config.cjs
 
 # 安装依赖
 RUN npm install --registry=https://registry.npmmirror.com
