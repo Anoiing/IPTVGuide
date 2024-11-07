@@ -52,7 +52,10 @@ try {
 
   // 保存格式化的日志
   const pushLog = (s) => {
-    if (s.indexOf('Attempted to use detached Frame')) {
+    if (
+      s.includes('Attempted to use detached Frame') ||
+      s.includes('Protocol error')
+    ) {
       return;
     }
     const l = `${new Date().toString().replace('GMT+0800 (中国标准时间)', '')}  ${s}`;
@@ -72,6 +75,86 @@ try {
     } catch (error) {
       pushLog(error.message || String(error));
     }
+  };
+
+  // 按数字、英文、中文的顺序排序
+  const customSort = (a, b) => {
+    const nameA = a.name;
+    const nameB = b.name;
+
+    let indexA = 0;
+    let indexB = 0;
+
+    while (indexA < nameA.length && indexB < nameB.length) {
+      let charA = nameA[indexA];
+      let charB = nameB[indexB];
+
+      let numA = null;
+      let numB = null;
+
+      if (!isNaN(Number(charA))) {
+        let numStrA = '';
+        while (indexA < nameA.length && !isNaN(Number(nameA[indexA]))) {
+          numStrA += nameA[indexA];
+          indexA++;
+        }
+        numA = Number(numStrA);
+      }
+
+      if (!isNaN(Number(charB))) {
+        let numStrB = '';
+        while (indexB < nameB.length && !isNaN(Number(nameB[indexB]))) {
+          numStrB += nameB[indexB];
+          indexB++;
+        }
+        numB = Number(numStrB);
+      }
+
+      if (numA !== null && numB !== null) {
+        if (numA < numB) {
+          return -1;
+        } else if (numA > numB) {
+          return 1;
+        }
+      } else if (numA !== null) {
+        return -1;
+      } else if (numB !== null) {
+        return 1;
+      } else {
+        if (
+          (/[a-zA-Z]/.test(charA) && !/[a-zA-Z]/.test(charB)) ||
+          (/[a-zA-Z]/.test(charA) &&
+            /[a-zA-Z]/.test(charB) &&
+            charA.localeCompare(charB) < 0)
+        ) {
+          return -1;
+        } else if (
+          (!/[a-zA-Z]/.test(charA) && /[a-zA-Z]/.test(charB)) ||
+          (/[a-zA-Z]/.test(charA) &&
+            /[a-zA-Z]/.test(charB) &&
+            charA.localeCompare(charB) > 0)
+        ) {
+          return 1;
+        }
+
+        if (/[\u4e00-\u9fa5]/.test(charA) && /[\u4e00-\u9fa5]/.test(charB)) {
+          const strA = nameA.slice(indexA);
+          const strB = nameB.slice(indexB);
+          return strA.localeCompare(strB, 'zh-CN');
+        }
+
+        if (charA < charB) {
+          return -1;
+        } else if (charA > charB) {
+          return 1;
+        }
+      }
+
+      indexA++;
+      indexB++;
+    }
+
+    return nameA.length - nameB.length;
   };
 
   // 获取本地配置
@@ -180,6 +263,7 @@ try {
   // 等待搜索结果页面加载完成并获取结果列表
   const getSearchResults = async () => {
     await gTry(() => {
+      systemConfig = getConfig();
       gSearchPage
         .waitForSelector('div.tables', { timeout: 300000 })
         .then(async () => {
@@ -219,9 +303,18 @@ try {
             }
             return l;
           }, resultContainer);
-
           // 按存活时间排序，优先选择新上线的（存活时间长的不一定就能播放，新上线的可播放概率大）
-          resultList.sort((a, b) => a.life - b.life);
+          // 优先检查上一次结果的地址
+          resultList = [
+            {
+              address: systemConfig.preferredAddress,
+              href: `http://www.foodieguide.com/iptvsearch/hotellist.html?s=${systemConfig.preferredAddress}`,
+              channelNumbers: systemConfig.channels,
+              life: 1,
+              info: '本地',
+            },
+            ...[...resultList].sort((a, b) => a.life - b.life),
+          ];
           pushLog('开始优选地址...');
 
           // 开启新页面用于加载详情页
@@ -273,13 +366,6 @@ try {
             return;
           }
 
-          // 写入组播源地址
-          systemConfig.preferredAddress = checkedAddress.address;
-          fs.writeFileSync(
-            `${CONFIG_DIR}/config.json`,
-            JSON.stringify(systemConfig)
-          );
-
           // 源没有失效，获取频道列表
           pushLog(`正在获取地址 ${checkedAddress.address} 下的所有频道...`);
           // 获取分页
@@ -297,7 +383,17 @@ try {
             const channels = await getPaginatedChannels(detailPage, index);
             allChannels = allChannels.concat(channels);
           }
-          saveToFile(allChannels);
+          // 按频道名排序
+          let channelsArray = allChannels.sort(customSort);
+          // 按频道名去重
+          if (systemConfig.dedup) {
+            channelsArray = [
+              ...new Set([...channelsArray].map((item) => item.name)),
+            ].map((name) =>
+              [...channelsArray].find((item) => item.name === name)
+            );
+          }
+          saveToFile(channelsArray, checkedAddress.address);
           return true;
         });
     });
@@ -337,13 +433,14 @@ try {
   };
 
   // 获取到的频道按格式保存到文件
-  const saveToFile = async (allChannels) => {
+  const saveToFile = async (allChannels, preferredAddress) => {
     await gTry(async () => {
       // 保存到本地
       pushLog('获取频道成功，开始生成文件保存到本地...');
 
-      // 写入频道数量
+      // 写入优选地址和频道数量
       systemConfig = getConfig();
+      systemConfig.preferredAddress = preferredAddress;
       systemConfig.channels = allChannels.length;
       fs.writeFileSync(
         `${CONFIG_DIR}/config.json`,
@@ -369,9 +466,11 @@ try {
       m3uContent += allChannels
         .map((channel) => {
           let logoName = channel.name
-            .trim()
             .replace('高清', '')
-            .replace('-', '');
+            .replace(' 4K', '')
+            .replace(' 4k', '')
+            .replace('-', '')
+            .trim();
           let groupName = '其他';
           if (logoName.includes('CCTV')) {
             groupName = '央视';
@@ -382,7 +481,9 @@ try {
           } else if (logoName.includes('CHC')) {
             groupName = '电影';
           }
-          return `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="https://live.fanmingming.com/tv/${logoName}.png" group-title="${groupName}",${channel.name}\n${channel.url}`;
+          return channel.name
+            ? `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="https://live.fanmingming.com/${logoName.includes('广播') ? 'radio' : 'tv'}/${logoName}.png" group-title="${groupName}",${channel.name}\n${channel.url}`
+            : '';
         })
         .join('\n');
       await fs.writeFileSync(`${OUT_DIR}/channels.m3u`, m3uContent);
@@ -476,7 +577,7 @@ try {
           pushLog('自动执行一次任务');
           getChannels();
         },
-        { timezone: TZ }
+        { scheduled: true, timezone: TZ }
       );
       res.send(response.success(true));
     } catch (error) {
@@ -590,7 +691,6 @@ try {
 
   // 每次启动服务时自动后台启动定时任务
   systemConfig = getConfig();
-  console.log(systemConfig);
   if (systemConfig.cron) {
     // 先停止原来的定时任务
     if (task) {
@@ -604,7 +704,7 @@ try {
         pushLog('自动执行一次任务');
         getChannels();
       },
-      { timezone: TZ }
+      { scheduled: true, timezone: TZ }
     );
     pushLog('启动自动任务成功');
   }
