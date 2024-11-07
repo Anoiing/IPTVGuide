@@ -47,6 +47,4 @@ docker run -d \
 
 ## 鸣谢
 
-www.foodieguide.com
-
 我的NAS小伙伴们，帕克、森度、老李、奥特曼、囚徒、句号哥和包含在省略号里的你们......
