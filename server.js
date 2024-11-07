@@ -367,10 +367,23 @@ try {
       let m3uContent =
         '#EXTM3U x-tvg-url="https://live.fanmingming.com/e.xml"\n';
       m3uContent += allChannels
-        .map(
-          (channel) =>
-            `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="",${channel.name}\n${channel.url}`
-        )
+        .map((channel) => {
+          let logoName = channel.name
+            .trim()
+            .replace('高清', '')
+            .replace('-', '');
+          let groupName = '其他';
+          if (logoName.includes('CCTV')) {
+            groupName = '央视';
+          } else if (logoName.includes('卫视')) {
+            groupName = '卫视';
+          } else if (logoName.includes('NewTV')) {
+            groupName = '新视';
+          } else if (logoName.includes('CHC')) {
+            groupName = '电影';
+          }
+          return `#EXTINF:-1 tvg-name="${channel.name}" tvg-logo="https://live.fanmingming.com/tv/${logoName}.png" group-title="${groupName}",${channel.name}\n${channel.url}`;
+        })
         .join('\n');
       await fs.writeFileSync(`${OUT_DIR}/channels.m3u`, m3uContent);
       pushLog('m3u文件保存成功');
