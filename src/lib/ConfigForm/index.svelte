@@ -139,8 +139,10 @@
         <div
           role="none"
           class={cx(
-            'w-14 h-7 rounded-full p-0.5 border-2 hover:border-blue-500 cursor-pointer',
-            dedupValue ? 'bg-white-500 text-right ' : 'bg-gray-200 text-left'
+            'w-14 h-7 rounded-full p-0.5 border-2 border-gray-300  hover:border-blue-500 cursor-pointer',
+            dedupValue
+              ? 'bg-blue-500 text-right border-blue-500'
+              : 'bg-gray-200 text-left'
           )}
           on:click={() => {
             dedupValue = !dedupValue;
@@ -149,7 +151,7 @@
           <div
             class={cx(
               'rounded-full w-5 h-5 inline-block',
-              dedupValue ? 'bg-blue-500' : 'bg-gray-400'
+              dedupValue ? 'bg-white' : 'bg-blue-500'
             )}
           ></div>
         </div>
