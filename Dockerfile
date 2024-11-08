@@ -1,5 +1,5 @@
 # docker build --build-arg arch=amd64 -t iptvguide:版本号 "."
-# docker save -o /Users/anoiv/desktop/iptvguide.tar iptvguide
+# docker save -o /home/AnoiV/iptvguide.tar iptvguide:版本号
 # docker tag iptvguide:版本号 anoiv/iptvguide:latest
 # docker push anoiv/iptvguide:latest
 
@@ -33,7 +33,7 @@ COPY ./server.js /app
 COPY ./entrypoint.sh /app
 COPY ./package.server.json /app/package.json
 COPY ./README.md /app/README.md
-# COPY ./ecosystem.config.cjs /app
+# COPY ./ecosystem.config.cjs /app/ecosystem.config.cjs
 
 # 安装依赖
 RUN npm install --registry=https://registry.npmmirror.com
@@ -52,4 +52,4 @@ ENV TZ="Asia/Shanghai"
 # 设置容器启动时执行的命令或脚本
 CMD ["node", "server.js"]
 # ENTRYPOINT ["/app/entrypoint.sh"]
-# CMD ["pm2-runtime start ecosystem.config.cjs"]
+# CMD ["pm2-runtime", "start", "ecosystem.config.cjs"]

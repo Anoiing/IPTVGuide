@@ -4,9 +4,7 @@ import qs from 'querystringify';
 
 export const request = {
   get: async (url: string, queries?: any) => {
-    const response = await axios.get(
-      `${url}${qs.stringify(queries, true)}`
-    );
+    const response = await axios.get(`${url}${qs.stringify(queries, true)}`);
     return response.data;
   },
   post: async (url: string, body: any) => {
@@ -18,7 +16,6 @@ export const request = {
     return response.data;
   },
 };
-
 
 export const getConfig = () => {
   request.get('/api/getConfig').then(({ data }) => {
@@ -47,10 +44,6 @@ export const verifierCron = async (value: string) => {
 
 export const saveConfig = async (value: any) => {
   return await request.post('/api/saveConfig', value);
-};
-
-export const initTask = async () => {
-  return await request.get('/api/initTask');
 };
 
 export const runOnce = async () => {
