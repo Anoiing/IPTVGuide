@@ -3,53 +3,33 @@
 # docker tag iptvguide:版本号 anoiv/iptvguide:latest
 # docker push anoiv/iptvguide:latest
 
-ARG arch='amd64'
-# 使用Node.js的官方Docker镜像作为基础镜像  
-FROM --platform=linux/${arch} node:18-alpine
+# 使用Node.js 20 Alpine镜像
+FROM node:20-alpine
 
-# 设置环境变量，以便 puppeteer 可以下载正确的 Chromium 版本  
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true  
-ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/chromium-browser  
-
-# 安装必要的依赖  
-RUN apk add --no-cache \  
-    chromium \  
-    nss \  
-    freetype \  
-    harfbuzz \  
-    ca-certificates \  
-    ttf-freefont \  
-    gcc \  
-    g++ \  
-    make \  
-    python3
-
-# 设置工作目录
 WORKDIR /app
 
-# 复制前端和后端文件
-COPY ./dist /app/dist
-COPY ./server.js /app
-COPY ./entrypoint.sh /app
-COPY ./package.server.json /app/package.json
-COPY ./README.md /app/README.md
-# COPY ./ecosystem.config.cjs /app/ecosystem.config.cjs
+# 安装pnpm
+RUN npm install -g pnpm
 
-# 安装依赖
-RUN npm install --registry=https://registry.npmmirror.com
-# RUN npm i pm2 --registry=https://registry.npmmirror.com
+# 复制依赖文件
+COPY package.json pnpm-lock.yaml ./
 
-# 预创建文件夹，防止读不到报错
-RUN mkdir -p config
+# 安装所有依赖（包括开发依赖，因为需要tsx）
+RUN pnpm install --no-frozen-lockfile
+
+# 复制构建好的应用和所有源代码
+COPY dist-backup ./dist
+COPY src ./src
+COPY server.js ./
+
+# 创建输出目录
 RUN mkdir -p output
 
-# 暴露端口 5174
+# 设置环境变量，指定端口为5174（与server.js中的默认端口一致）
+ENV PORT=5174
+
+# 暴露端口5174
 EXPOSE 5174
 
-# 设置环境变量
-ENV TZ="Asia/Shanghai"
-
-# 设置容器启动时执行的命令或脚本
-CMD ["node", "server.js"]
-# ENTRYPOINT ["/app/entrypoint.sh"]
-# CMD ["pm2-runtime", "start", "ecosystem.config.cjs"]
+# 启动完整服务器
+CMD ["pnpm", "run", "start"]

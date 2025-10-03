@@ -7,21 +7,83 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+dist-ssr/
+dist-server/
+build/
 *.local
-output
-config
+
+# Runtime data
+output/
+config/
+test-output/
+test-config/
+coverage/
+.nyc_output/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package manager files
 pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Task summaries and reports
+TASK_*.md
+task-*.md
+*-report.md
+*-summary.md
+PROJECT_COMPLETION_REPORT.md
+dependency-analysis-report.md
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Performance reports
+performance-reports/
+
+# Docker volumes
+docker-data/

@@ -1,60 +1,117 @@
-<div align="center">
-  <h1 align="center">IPTV电视直播源更新工具</h1>
-</div>
+# IPTV Guide
 
-<div align="center">一个自用的爬虫工具而已，用于获取网络上特定省份的一些酒店的组播 IPTV 地址。自用分享，理性使用。不要进行高频次任务，别人建站不易</div>
-<div align="center">按省份地区或者地级市搜索当地的组播源，一般都包括CCTV、各省卫视和一些当地的地方台。</div>
+IPTV电视直播源更新工具 - 一个基于 Node.js + TypeScript + Svelte 的 Web 应用，用于爬取和管理 IPTV 频道源。
 
+## 功能特性
 
-## 特点
+- 📺 **自动爬取**: 定时从数据源获取最新的IPTV频道信息
+- 🔄 **智能更新**: 自动检测频道可用性并更新失效链接
+- 📋 **多格式输出**: 支持M3U、JSON、TXT等多种格式输出
+- 🎯 **M3U直接访问**: 提供 `/m3u` 路由，可直接获取标准格式的播放列表
+- ⚙️ **灵活配置**: 可自定义爬取频率、请求延迟等参数
+- 🛡️ **安全保障**: 内置黑名单机制，防止无效IP影响爬取效率
+- 📊 **实时监控**: 提供系统状态监控和日志查看功能
+- 🐳 **Docker支持**: 一键部署，支持多平台运行
 
-- Emby可播放
-- 功能简单，你想要的功能都没有，只满足了我自己🤣
-- 容易崩，重启就好，我自己能用就行😆
-- 源失效快，我自己能用就行🙃
-- 镜像更新慢，想到加什么再加，随缘😇
+## 快速开始
 
-## 使用
-
-### 拉取镜像
-```bash
-docker pull anoiv/iptvguide:latest
-```
-### 运行容器
+### 使用Docker部署（推荐）
 
 ```bash
-docker run -d \
-  -p 5174:5174 \
-  --name=iptvguide \
-  --restart=always \
-  -v <your folder>:/app/config \
-  -v <your folder>:/app/output \
-  -e TZ="Asia/Shanghai" \
-  anoiv/iptvguide:latest
+# 克隆项目
+git clone https://github.com/yourusername/iptvguide.git
+cd iptvguide
+
+# 启动服务
+docker-compose up -d
+
+# 访问应用
+http://localhost:5174
 ```
 
-## 其他
+### 本地开发
 
-1、Github上太多做的比我好的大佬了，但是大部分源在Emby里都没法正常播放，这不是Emby的问题，是源限制了。所以我自己弄一个工具，给我的Emby用，这是我写这个项目的初衷
+```bash
+# 安装依赖
+npm install -g pnpm
+pnpm install
 
-2、服务容易崩，崩了重启就好
+# 启动开发服务器
+pnpm run dev
 
-3、遇到获取到的组播地址的大部分或者所有频道都不能播放，加到黑名单里重新跑一次任务就好
+# 构建生产版本
+pnpm run build
 
-4、这种ipv4的组播源一般失效的都比较快，失效了就重新跑任务换一个就好
+# 启动生产服务器
+pnpm run start
+```
 
-5、拿工具去爬别人的网站的，所以你的运行频率请控制好，别恶意高频跑任务整别人网站，我们这些白嫖的要有点道德
+### Docker构建
 
-## 鸣谢
+```bash
+# 构建amd64架构镜像
+docker build --build-arg arch=amd64 -t iptvguide:2.0.0 .
 
-我的NAS小伙伴们，帕克、森度、老李、奥特曼、囚徒、句号哥和包含在省略号里的你们......
+# 或同时打上latest标签
+docker build --build-arg arch=amd64 -t iptvguide:2.0.0 -t iptvguide:latest .
 
-## 更新日志
+# 运行容器
+docker run --rm -p 5174:5174 iptvguide:2.0.0
+```
 
-#### 1.0.1
+## API接口
 
-- 🐞 修复定时任务无效的问题。
-- 🌟 优化下次执行任务时优先检查并沿用上次的结果。
-- 🌟 优化存排序逻辑。
-- 🎉 新增频道台标和分组。
-- 🎉 新增按频道名去重的开关配置功能。
+### M3U播放列表
+
+直接获取M3U格式的播放列表：
+
+```
+GET /m3u
+```
+
+**响应头:**
+- `Content-Type: audio/x-mpegurl; charset=utf-8`
+- `Content-Disposition: inline; filename="channels.m3u"`
+
+**示例:**
+```bash
+# 下载M3U文件
+curl -o channels.m3u http://localhost:5174/m3u
+
+# 在IPTV播放器中使用
+播放列表URL: http://localhost:5174/m3u
+```
+
+### 其他API
+
+- `GET /api/getStatus` - 获取系统状态
+- `GET /api/runOnce` - 手动执行一次爬取任务
+- `GET /api/cancel` - 取消当前运行的任务
+
+## 配置说明
+
+### 系统配置
+
+在Web界面中可以配置以下参数：
+
+- **定时任务**: 设置自动爬取的Cron表达式
+- **请求延迟**: 控制请求间隔，避免被目标网站限制
+- **重试次数**: 设置请求失败时的重试次数
+- **黑名单**: 管理无效的IP地址
+
+### 环境变量
+
+```bash
+# 应用端口
+PORT=5174
+
+# 时区设置
+TZ=Asia/Shanghai
+
+# 运行环境
+NODE_ENV=production
+```
+
+## 许可证
+
+[MIT License](LICENSE)

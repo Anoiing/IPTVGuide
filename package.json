@@ -1,10 +1,11 @@
 {
   "name": "iptvguide",
   "private": true,
-  "version": "1.0.1",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "start": "npx tsx server.js",
     "build": "vite build",
     "preview": "vite preview --host",
     "server": "node server.js",
@@ -13,26 +14,30 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.1.2",
     "@tsconfig/svelte": "^5.0.4",
+    "@types/cheerio": "^0.22.35",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node-cron": "^3.0.11",
     "@types/querystringify": "^2.0.2",
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "3.2.4",
     "autoprefixer": "^10.4.20",
     "express": "^4.21.1",
-    "pm2": "^5.4.2",
     "postcss": "^8.4.47",
-    "prettier": "^3.3.3",
-    "puppeteer": "^23.5.3",
+    "supertest": "^7.1.4",
     "svelte": "^4.2.19",
     "svelte-check": "^4.0.4",
-    "tslib": "^2.7.0",
     "typescript": "^5.5.3",
-    "vite": "^5.4.8",
-    "vite-plugin-replace": "^0.1.1"
+    "vite": "^5.4.20",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "axios": "^1.7.7",
-    "classnames": "^2.5.1",
+    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "node-cron": "^3.0.3",
+    "path-to-regexp": "^0.1.12",
     "querystringify": "^2.2.0",
     "tailwindcss": "^3.4.14"
   }

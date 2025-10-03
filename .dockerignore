@@ -1,4 +1,150 @@
-.vscode
-node_modules
-config
-output
+# Development tools and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Dependencies (will be installed in container)
+node_modules/
+.pnpm-store/
+
+# Build outputs (will be built in container)
+build/
+.next/
+.nuxt/
+.output/
+
+# Local configuration and data
+config/
+output/
+test-config/
+test-output/
+logs/
+*.log
+
+# Environment files
+.env*
+!.env.example
+
+# Testing
+**/__tests__/
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+coverage/
+.nyc_output/
+junit.xml
+
+# Documentation (except README)
+*.md
+!README.md
+docs/
+
+# Lock files (pnpm-lock.yaml will be copied explicitly)
+yarn.lock
+package-lock.json
+
+# Development configuration
+tsconfig*.json
+vite.config.*
+vitest.config.*
+svelte.config.js
+tailwind.config.js
+postcss.config.cjs
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+.kiro/
+scripts/
+docker-build-test.sh
+DOCKER_OPTIMIZATION.md
+PROJECT_COMPLETION_REPORT.md
+TASK_*.md
+task-*.md
+dependency-analysis-report.md
+
+# Package manager specific
+.pnpm-debug.log*
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+lib-cov/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
