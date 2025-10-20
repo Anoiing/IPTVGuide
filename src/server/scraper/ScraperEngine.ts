@@ -1,48 +1,44 @@
 /**
  * 爬取引擎模块
  * 负责从数据源爬取IPTV频道信息的核心模块
- * 
+ *
  * @implements {IScraperEngine}
  */
-import type { ScraperEngine as IScraperEngine } from '../../shared/types/interfaces.js';
+import type { ScraperEngine as IScraperEngine } from '../../shared/types/interfaces.ts';
 import type {
   ScrapingResult,
   ScrapingStatus,
   ChannelInfo,
   ScrapingTask,
   ScrapingDecision,
-} from '../../shared/core/types/index.js';
-import { HttpClient } from './HttpClient.js';
-import { HtmlParser } from './HtmlParser.js';
-import { Logger } from '../utils/logger.js';
-import { delay, randomDelay } from '../utils/delay.js';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.js';
-import { EnhancedHttpClient } from '../http/index.js';
-import { ConfigManager } from './ConfigManager.js';
+} from '../../shared/core/types/index.ts';
+import { HtmlParser } from './HtmlParser.ts';
+import { Logger } from '../utils/logger.ts';
+import { delay, randomDelay } from '../utils/delay.ts';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
+import { EnhancedHttpClient } from '../http/index.ts';
+import { ConfigManager } from './ConfigManager.ts';
 
 /**
  * 爬取引擎类
  * 管理整个爬取流程，包括数据获取、解析和处理
  */
 export class ScraperEngine implements IScraperEngine {
-  /** 标准HTTP客户端 */
-  private httpClient: HttpClient;
-  
-  /** 增强HTTP客户端，支持连接池和缓存 */
-  private enhancedHttpClient: EnhancedHttpClient;
-  
+  /** 增强HTTP客户端 */
+  private httpClient: EnhancedHttpClient;
+
   /** HTML解析器 */
   private htmlParser: HtmlParser;
-  
+
   /** 日志记录器 */
   private logger: Logger;
-  
+
   /** 当前爬取任务 */
   private currentTask: ScrapingTask | null = null;
-  
+
   /** 停止标志 */
   private shouldStop: boolean = false;
-  
+
   /** 配置目录路径 */
   private configDir: string;
 
@@ -58,30 +54,23 @@ export class ScraperEngine implements IScraperEngine {
    */
   constructor(configDir: string = './config') {
     this.configDir = configDir;
-    this.httpClient = new HttpClient(configDir);
-    this.enhancedHttpClient = new EnhancedHttpClient(configDir, {
+    this.httpClient = new EnhancedHttpClient(configDir, {
       maxConcurrentRequests: 5,
       rateLimit: 2, // 每秒最多2个请求
       enableCaching: true,
       cacheTTL: 300000, // 5分钟缓存
       timeout: 30000,
-      maxRetries: 3
+      maxRetries: 3,
     });
     this.htmlParser = new HtmlParser(configDir);
     this.logger = new Logger(configDir);
     this.configManager = new ConfigManager(configDir);
-
-    // 设置默认的请求配置
-    this.httpClient.setRandomDelay(true, 3, 6);
-    this.httpClient.setRateLimit(0.2); // 每5秒一个请求
   }
 
   // 获取黑名单列表
   private getBlacklist(): string[] {
     try {
-      const { ConfigManager } = require('./ConfigManager.js');
-      const configManager = new ConfigManager(this.configDir);
-      return configManager.getBlacklist();
+      return this.configManager.getBlacklist();
     } catch (error) {
       this.logger.error('获取黑名单失败', error);
       return [];
@@ -91,9 +80,7 @@ export class ScraperEngine implements IScraperEngine {
   // 获取当前首选地址
   private getCurrentPreferredAddress(): string {
     try {
-      const { ConfigManager } = require('./ConfigManager.js');
-      const configManager = new ConfigManager(this.configDir);
-      const config = configManager.loadConfig();
+      const config = this.configManager.loadConfig();
       return config.preferredAddress || '';
     } catch (error) {
       this.logger.error('获取当前首选地址失败', error);
@@ -151,10 +138,10 @@ export class ScraperEngine implements IScraperEngine {
   /**
    * 启动爬取流程
    * 执行完整的频道数据爬取过程
-   * 
+   *
    * @returns {Promise<ScrapingResult>} 爬取结果
    * @throws {Error} 当爬取过程中发生错误时抛出
-   * 
+   *
    * @example
    * ```typescript
    * const scraper = new ScraperEngine('./config');
@@ -369,15 +356,76 @@ export class ScraperEngine implements IScraperEngine {
 
       return result;
     } catch (error) {
-      this.logger.error('爬取失败', error);
+      // 提供更详细的错误信息
+      let errorType:
+        | 'HTTP_ERROR'
+        | 'PARSE_ERROR'
+        | 'VALIDATION_ERROR'
+        | 'SCRAPING_ERROR'
+        | 'NETWORK_ERROR'
+        | 'TIMEOUT_ERROR'
+        | 'CONFIG_ERROR' = 'SCRAPING_ERROR';
+      let errorMessage = '未知错误';
+
+      if (error instanceof Error) {
+        errorMessage = error.message || '未知错误';
+
+        // 根据错误信息分类错误类型
+        if (
+          error.message.includes('ECONNREFUSED') ||
+          error.message.includes('ECONNRESET')
+        ) {
+          errorType = 'NETWORK_ERROR';
+          errorMessage = `网络连接错误: ${error.message}`;
+        } else if (
+          error.message.includes('ETIMEDOUT') ||
+          error.message.includes('ECONNABORTED') ||
+          error.message.includes('timeout')
+        ) {
+          errorType = 'TIMEOUT_ERROR';
+          errorMessage = `请求超时: ${error.message}`;
+        } else if (
+          error.message.includes('HTTP') &&
+          (error.message.includes('status') ||
+            error.message.includes('404') ||
+            error.message.includes('500'))
+        ) {
+          errorType = 'HTTP_ERROR';
+          errorMessage = `HTTP请求错误: ${error.message}`;
+        } else if (
+          error.message.includes('解析') ||
+          error.message.includes('parse') ||
+          error.message.includes('cheerio')
+        ) {
+          errorType = 'PARSE_ERROR';
+          errorMessage = `HTML解析错误: ${error.message}`;
+        } else if (
+          error.message.includes('配置') ||
+          error.message.includes('config')
+        ) {
+          errorType = 'CONFIG_ERROR';
+          errorMessage = `配置错误: ${error.message}`;
+        } else if (
+          error.message.includes('验证') ||
+          error.message.includes('validation')
+        ) {
+          errorType = 'VALIDATION_ERROR';
+          errorMessage = `数据验证错误: ${error.message}`;
+        } else {
+          errorType = 'SCRAPING_ERROR';
+          errorMessage = `爬取过程错误: ${error.message}`;
+        }
+      }
+
+      this.logger.error(`爬取失败: ${errorType} - ${errorMessage}`, error);
 
       if (this.currentTask) {
         this.currentTask.status = 'ERROR';
         this.currentTask.endTime = new Date();
         this.currentTask.errors.push({
           timestamp: new Date(),
-          type: 'HTTP_ERROR',
-          message: (error as Error).message,
+          type: errorType,
+          message: errorMessage,
         });
       }
 
@@ -395,7 +443,7 @@ export class ScraperEngine implements IScraperEngine {
   /**
    * 停止当前爬取任务
    * 设置停止标志，使爬取流程安全退出
-   * 
+   *
    * @returns {void}
    */
   stopScraping(): void {
@@ -409,7 +457,7 @@ export class ScraperEngine implements IScraperEngine {
 
   /**
    * 获取当前爬取状态
-   * 
+   *
    * @returns {ScrapingStatus} 当前爬取状态
    */
   getStatus(): ScrapingStatus {
@@ -435,7 +483,7 @@ export class ScraperEngine implements IScraperEngine {
         return {
           shouldScrape: false,
           reason: 'AVAILABILITY_LOW',
-          lastCheckTime: new Date()
+          lastCheckTime: new Date(),
         };
       }
 
@@ -443,24 +491,24 @@ export class ScraperEngine implements IScraperEngine {
       return {
         shouldScrape: true,
         reason: 'AVAILABILITY_OK',
-        lastCheckTime: new Date()
+        lastCheckTime: new Date(),
       };
-
     } catch (error) {
       this.logger.error('检查爬取可用性时发生错误', { error });
       return {
         shouldScrape: false,
         reason: 'NO_RECENT_DATA',
-        lastCheckTime: new Date()
+        lastCheckTime: new Date(),
       };
     }
   }
 
   private async getHotelIPs(): Promise<string[]> {
     const url = 'https://tonkiang.us/hoteliptv2025.php';
-    const response = await this.enhancedHttpClient.get(url, {
+    this.logger.info(`正在访问酒店IP列表页面: ${url}`);
+    const response = await this.httpClient.get(url, {
       cacheKey: 'hotel-ips',
-      skipCache: false
+      skipCache: false,
     });
     return this.htmlParser.parseHotelIPs(response.data);
   }
@@ -469,30 +517,85 @@ export class ScraperEngine implements IScraperEngine {
     const url = `https://tonkiang.us/hoteliptv2025.php?s=${encodeURIComponent(
       hotelIP
     )}`;
-    const response = await this.enhancedHttpClient.get(url, {
+    this.logger.info(`正在访问频道IP列表页面: ${url}`);
+    const response = await this.httpClient.get(url, {
       cacheKey: `channel-ips-${hotelIP}`,
-      skipCache: false
+      skipCache: false,
     });
     return this.htmlParser.parseChannelIPs(response.data);
   }
 
+  /**
+   * 获取指定频道IP的频道列表
+   * @param channelIP 频道IP地址
+   * @returns 频道信息数组
+   */
   private async getChannelList(channelIP: string): Promise<ChannelInfo[]> {
-    // 使用实际的数据源URL
+    // 使用AJAX端点直接获取频道列表数据
     const dataUrl = `https://tonkiang.us/listall.php?s=${encodeURIComponent(
       channelIP
-    )}&c=`;
+    )}&c=false`;
 
     try {
-      const response = await this.enhancedHttpClient.get(dataUrl, {
+      this.logger.info(`开始获取频道列表: ${channelIP}`);
+      this.logger.info(`正在访问频道列表页面: ${dataUrl}`);
+      this.logger.debug(`请求URL: ${dataUrl}`);
+
+      const response = await this.httpClient.get(dataUrl, {
         cacheKey: `channel-list-${channelIP}`,
-        skipCache: false
+        skipCache: false,
       });
+
+      // 验证HTML内容
+      if (!response.data || typeof response.data !== 'string') {
+        this.logger.error(
+          `获取到的HTML内容无效: ${typeof response.data}, 长度: ${
+            response.data?.length || 0
+          }`
+        );
+        return [];
+      }
+
+      if (response.data.length === 0) {
+        this.logger.warn(`获取到的HTML内容为空: ${channelIP}`);
+        return [];
+      }
+      // 添加调试信息
+      this.logger.info(`获取到HTML内容长度: ${response.data.length} 字符`);
+      this.logger.debug(
+        `HTML内容前200字符: ${response.data.substring(0, 200)}`
+      );
+
+      // 检查是否包含预期的HTML结构
+      if (!response.data.includes('<') || !response.data.includes('>')) {
+        this.logger.warn(`HTML内容格式异常，可能不是有效的HTML: ${channelIP}`);
+        this.logger.debug(`完整内容: ${response.data}`);
+      }
+
       const channels = this.htmlParser.parseChannelList(response.data);
 
       if (channels.length > 0) {
         this.logger.info(`${channelIP} 解析到 ${channels.length} 个频道`);
+        this.logger.debug(
+          `解析到的频道: ${channels.map((c) => c.name).join(', ')}`
+        );
       } else {
-        this.logger.warn(`${channelIP} 未找到频道`);
+        this.logger.warn(
+          `${channelIP} 未找到频道，HTML可能不包含预期的频道结构`
+        );
+        // 输出HTML内容的关键部分用于调试
+        const resultElements = (
+          response.data.match(/<[^>]*class[^>]*result[^>]*>/gi) || []
+        ).length;
+        const channelElements = (
+          response.data.match(/<[^>]*class[^>]*channel[^>]*>/gi) || []
+        ).length;
+        const m3u8Elements = (
+          response.data.match(/<[^>]*class[^>]*m3u8[^>]*>/gi) || []
+        ).length;
+        this.logger.debug(
+          `HTML结构分析 - .result元素: ${resultElements}, .channel元素: ${channelElements}, .m3u8元素: ${m3u8Elements}`
+        );
       }
 
       return channels;

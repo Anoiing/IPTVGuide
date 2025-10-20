@@ -3,8 +3,8 @@
  * 提供全局错误处理、错误分类和错误恢复机制
  */
 
-import { ErrorType, ErrorSeverity } from './types.js';
-import { Logger } from '../../../server/utils/logger.js';
+import { ErrorType, ErrorSeverity } from './types.ts';
+import { Logger } from '../../../server/utils/logger.ts';
 
 export interface ErrorContext {
   method?: string;

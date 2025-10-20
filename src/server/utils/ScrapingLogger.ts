@@ -1,12 +1,12 @@
 // 爬取流程专用日志记录器
-import { Logger, LogLevel, type LogEntry } from './logger.js';
+import { Logger, LogLevel, type LogEntry } from './logger.ts';
 import {
   formatTimestamp,
   calculateAverage,
   countByKey,
   shouldFilterLogMessage,
-} from './validation.js';
-import type { ScrapingTask, TaskError } from '../../shared/types/scraper.js';
+} from './validation.ts';
+import type { ScrapingTask, TaskError } from '../../shared/types/scraper.ts';
 
 export interface ScrapingLogEntry extends LogEntry {
   phase?:

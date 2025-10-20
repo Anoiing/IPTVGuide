@@ -6,20 +6,20 @@ import cron from 'node-cron';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { 
-  ChannelAvailabilityMonitor, 
+import type { 
   ChannelCheckConfig, 
   CheckStatus, 
   ChannelCheckResult, 
   ChannelValidationResult, 
   ScrapingDecision,
   ChannelCheck,
-  NotificationConfig
-} from './types.js';
-import { ChannelInfo } from '../../shared/types/scraper.js';
-import { Logger } from '../utils/logger.js';
-import { ConfigManager } from '../scraper/ConfigManager.js';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.js';
+  NotificationConfig,
+  ChannelAvailabilityMonitor
+} from './types.ts';
+import type { ChannelInfo } from '../../shared/types/scraper.ts';
+import { Logger } from '../utils/logger.ts';
+import { ConfigManager } from '../scraper/ConfigManager.ts';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
 
 export class ChannelAvailabilityMonitorImpl implements ChannelAvailabilityMonitor {
   private configManager: ConfigManager;

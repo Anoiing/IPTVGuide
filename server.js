@@ -4,12 +4,12 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { ScraperEngine } from './src/server/scraper/ScraperEngine.js';
-import { FileGenerator } from './src/server/scraper/FileGenerator.js';
-import { ConfigManager } from './src/server/scraper/ConfigManager.js';
-import { ChannelAvailabilityMonitorImpl } from './src/server/monitoring/index.js';
-import { EnhancedConfigManager } from './src/server/config/index.js';
-import { ServiceContainer } from './src/server/services/index.js';
+import { ScraperEngine } from './src/server/scraper/ScraperEngine.ts';
+import { FileGenerator } from './src/server/scraper/FileGenerator.ts';
+import { ConfigManager } from './src/server/scraper/ConfigManager.ts';
+import { ChannelAvailabilityMonitorImpl } from './src/server/monitoring/index.ts';
+import { EnhancedConfigManager } from './src/server/config/index.ts';
+import { ServiceContainer } from './src/server/services/index.ts';
 
 try {
   dotenv.config();
@@ -54,39 +54,36 @@ try {
   // 任务超时定时器
   let taskTimeout = null;
 
-  const CONFIG_DIR = process.env.CONFIG_DIR || './config';
-  const OUT_DIR = process.env.OUT_DIR || './output';
+  const configDir = process.env.CONFIG_DIR || './config';
+  const outDir = process.env.OUT_DIR || './output';
   const TZ = process.env.TZ || 'Asia/Shanghai';
 
   // 初始化模块
   const serviceContainer = new ServiceContainer({
-    configDir: CONFIG_DIR,
-    dataDir: OUT_DIR,
+    configDir: configDir,
+    dataDir: outDir,
     enableEnhancedServices: true
   });
   
   await serviceContainer.initialize();
   
   const enhancedConfigManager = new EnhancedConfigManager({
-    configDir: CONFIG_DIR,
-    backupDir: path.join(CONFIG_DIR, 'backups'),
+    configDir: configDir,
+    backupDir: path.join(configDir, 'backups'),
     enableHotReload: true,
     enableBackup: true,
     backupInterval: 60
   });
   
-  configManager = new ConfigManager(CONFIG_DIR);
-  scraperEngine = new ScraperEngine(CONFIG_DIR);
-  fileGenerator = new FileGenerator(OUT_DIR);
-  channelMonitor = new ChannelAvailabilityMonitorImpl(CONFIG_DIR, OUT_DIR);
+  configManager = new ConfigManager(configDir);
+  scraperEngine = new ScraperEngine(configDir);
+  fileGenerator = new FileGenerator(outDir);
+  channelMonitor = new ChannelAvailabilityMonitorImpl(configDir, outDir);
 
   // 保存格式化的日志
   const pushLog = (s) => {
-    if (
-      s.includes('Attempted to use detached Frame') ||
-      s.includes('Protocol error')
-    ) {
-      return;
+    if (typeof s !== 'string') {
+      s = JSON.stringify(s);
     }
     const l = `${new Date()
       .toString()
@@ -94,10 +91,10 @@ try {
     runLog.push(l);
     let originLog = '';
     try {
-      originLog = fs.readFileSync(`${CONFIG_DIR}/log.txt`, 'utf8');
+      originLog = fs.readFileSync(`${configDir}/log.txt`, 'utf8');
     } catch (error) {}
     const newLog = `${l}\n${originLog}`;
-    fs.writeFileSync(`${CONFIG_DIR}/log.txt`, newLog);
+    fs.writeFileSync(`${configDir}/log.txt`, newLog);
     console.log(l);
   };
 
@@ -197,12 +194,12 @@ try {
   const getConfig = () => {
     try {
       // 检查配置文件是否存在
-      if (!fs.existsSync(`${CONFIG_DIR}/config.json`)) {
+      if (!fs.existsSync(`${configDir}/config.json`)) {
         return {};
       }
 
       // 检查文件修改时间
-      const stats = fs.statSync(`${CONFIG_DIR}/config.json`);
+      const stats = fs.statSync(`${configDir}/config.json`);
       const currentModified = stats.mtime.getTime();
 
       // 如果缓存存在且文件未修改，返回缓存
@@ -433,11 +430,44 @@ try {
   });
 
   // 获取配置
-  app.get('/api/getConfig', async (req, res) => {
+  app.get('/api/config', (req, res) => {
     try {
-      res.send(response.success(getConfig()));
+      // 优先使用config.json文件，如果不存在则使用ConfigManager的默认配置
+      let config;
+      const configFilePath = `${configDir}/config.json`;
+      
+      if (fs.existsSync(configFilePath)) {
+        // 如果config.json存在，直接读取
+        config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+        pushLog('使用config.json配置文件');
+      } else {
+        // 如果config.json不存在，使用ConfigManager获取默认配置
+        config = configManager.loadConfig();
+        pushLog('config.json不存在，使用默认配置');
+      }
+      
+      res.json({ 
+        status: 'success', 
+        data: config,
+        message: fs.existsSync(configFilePath) ? '配置加载成功' : '使用默认配置'
+      });
     } catch (error) {
-      res.send(response.success(error));
+      pushLog(`获取配置失败：${error.message}`);
+      // 发生错误时，尝试使用ConfigManager的默认配置
+      try {
+        const defaultConfig = configManager.loadConfig();
+        res.json({ 
+          status: 'success', 
+          data: defaultConfig,
+          message: '配置文件读取失败，已使用默认配置'
+        });
+      } catch (fallbackError) {
+        res.status(500).json({ 
+          status: 'error', 
+          error: `配置加载失败：${error.message}`,
+          message: '无法加载配置文件'
+        });
+      }
     }
   });
 
@@ -668,12 +698,12 @@ try {
   });
 
   // 清空日志
-  app.get('/api/clearLog', async (req, res) => {
+  app.get('/api/logs/clear', async (req, res) => {
     try {
-      fs.writeFileSync(`${CONFIG_DIR}/log.txt`, '');
-      res.send(response.success(true));
+      fs.writeFileSync(`${configDir}/log.txt`, '');
+      res.json({ success: true });
     } catch (error) {
-      res.send(response.error(error));
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -2,59 +2,31 @@
  * 增强HTTP客户端
  * 提供连接池、缓存、并发控制和性能优化功能
  */
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import https from 'https';
 import http from 'http';
-import { Logger } from '../utils/logger.js';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.js';
+import { Logger } from '../utils/logger.ts';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
 
 /**
  * HTTP客户端配置接口
  */
 export interface HttpClientConfig {
-  /** 请求超时时间（毫秒） */
   timeout: number;
-  
-  /** 最大重试次数 */
   maxRetries: number;
-  
-  /** 基础退避延迟（毫秒） */
   baseBackoffMs: number;
-  
-  /** 请求频率限制（每秒请求数），0表示无限制 */
   rateLimit: number;
-  
-  /** 最大并发请求数 */
   maxConcurrentRequests: number;
-  
-  /** 连接超时时间（毫秒） */
   connectionTimeout: number;
-  
-  /** 是否启用Keep-Alive */
   keepAlive: boolean;
-  
-  /** Keep-Alive时间（毫秒） */
   keepAliveMsecs: number;
-  
-  /** 最大套接字数 */
   maxSockets: number;
-  
-  /** 最大空闲套接字数 */
   maxFreeSockets: number;
-  
-  /** 是否启用缓存 */
   enableCaching: boolean;
-  
-  /** 缓存TTL（毫秒） */
   cacheTTL: number;
-  
-  /** 是否启用压缩 */
   enableCompression: boolean;
-  
-  /** 是否启用User-Agent轮换 */
   userAgentRotation: boolean;
-  
-  /** 自定义User-Agent列表 */
   customUserAgents?: string[];
 }
 
@@ -62,19 +34,10 @@ export interface HttpClientConfig {
  * HTTP请求选项接口
  */
 export interface HttpRequestOptions {
-  /** 请求超时时间（毫秒） */
   timeout?: number;
-  
-  /** 重试次数 */
   retries?: number;
-  
-  /** 请求头 */
   headers?: Record<string, string>;
-  
-  /** 缓存键 */
   cacheKey?: string;
-  
-  /** 是否跳过缓存 */
   skipCache?: boolean;
 }
 
@@ -82,22 +45,11 @@ export interface HttpRequestOptions {
  * HTTP响应接口
  */
 export interface HttpResponse<T = any> {
-  /** 响应数据 */
   data: T;
-  
-  /** HTTP状态码 */
   status: number;
-  
-  /** HTTP状态文本 */
   statusText: string;
-  
-  /** 响应头 */
   headers: any;
-  
-  /** 是否来自缓存 */
   cached?: boolean;
-  
-  /** 响应时间戳 */
   timestamp: Date;
 }
 
@@ -105,46 +57,27 @@ export interface HttpResponse<T = any> {
  * 缓存条目接口
  */
 export interface CacheEntry<T = any> {
-  /** 缓存数据 */
   data: T;
-  
-  /** 时间戳 */
   timestamp: number;
-  
-  /** TTL（毫秒） */
   ttl: number;
 }
 
 /**
  * 增强HTTP客户端类
- * 提供连接池、缓存、并发控制和性能优化的HTTP客户端
+ * 提供连接池、缓存、并发控制等高级功能
  */
 export class EnhancedHttpClient {
-  /** Axios实例 */
   private axiosInstance: AxiosInstance;
-  
-  /** 日志记录器 */
   private logger: Logger;
-  
-  /** HTTP客户端配置 */
   private config: HttpClientConfig;
-  
-  /** 请求队列 */
   private requestQueue: Array<() => Promise<any>> = [];
-  
-  /** 活跃请求数 */
   private activeRequests: number = 0;
-  
-  /** 缓存 */
   private cache: Map<string, CacheEntry> = new Map();
-  
-  /** 速率限制队列 */
   private rateLimitQueue: Array<() => void> = [];
-  
-  /** 上次请求时间 */
   private lastRequestTime: number = 0;
+  private sessionCookies: Map<string, string> = new Map();
+  private sessionInitialized: Map<string, boolean> = new Map();
   
-  /** User-Agent列表 */
   private userAgents: string[] = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -153,10 +86,7 @@ export class EnhancedHttpClient {
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0',
   ];
   
-  /** 当前User-Agent索引 */
   private currentUserAgentIndex: number = 0;
-
-  // 需要阻止的数据采集域名
   private blockedDomains: string[] = [
     's4.histats.com',
     'www.googletagmanager.com',
@@ -172,15 +102,15 @@ export class EnhancedHttpClient {
 
   /**
    * 构造函数
-   * @param {string} configDir - 配置目录路径
-   * @param {Partial<HttpClientConfig>} config - HTTP客户端配置
+   * @param configDir 配置目录路径
+   * @param config HTTP客户端配置
    */
   constructor(configDir: string = './config', config?: Partial<HttpClientConfig>) {
     this.config = {
       timeout: 30000,
       maxRetries: 3,
       baseBackoffMs: 1000,
-      rateLimit: 0, // 0 = no limit
+      rateLimit: 0,
       maxConcurrentRequests: 10,
       connectionTimeout: 5000,
       keepAlive: true,
@@ -188,7 +118,7 @@ export class EnhancedHttpClient {
       maxSockets: 50,
       maxFreeSockets: 10,
       enableCaching: true,
-      cacheTTL: 300000, // 5 minutes
+      cacheTTL: 300000,
       enableCompression: true,
       userAgentRotation: true,
       ...config
@@ -222,6 +152,8 @@ export class EnhancedHttpClient {
       decompress: this.config.enableCompression,
       maxRedirects: 5,
       validateStatus: (status) => status < 500, // 只对5xx错误重试
+      responseType: 'text', // 确保以文本形式接收响应
+      responseEncoding: 'utf8', // 明确指定UTF-8编码
     });
 
     // 添加请求拦截器
@@ -302,11 +234,17 @@ export class EnhancedHttpClient {
       throw new Error(`Blocked tracking domain: ${url}`);
     }
 
+    this.logger.info(`正在访问: ${url}`);
+
+    // 确保会话已初始化
+    await this.ensureSessionInitialized(url);
+
     // 检查缓存
     if (this.config.enableCaching && !options?.skipCache) {
       const cacheKey = options?.cacheKey || url;
       const cachedResponse = this.getFromCache<T>(cacheKey);
       if (cachedResponse) {
+        this.logger.debug(`使用缓存响应: ${url}`);
         return {
           ...cachedResponse,
           cached: true,
@@ -343,6 +281,8 @@ export class EnhancedHttpClient {
       throw new Error(`Blocked tracking domain: ${url}`);
     }
 
+    this.logger.info(`正在POST访问: ${url}`);
+
     // 创建请求函数
     const requestFn = () => this.makeRequest<T>('POST', url, data, options);
 
@@ -374,20 +314,70 @@ export class EnhancedHttpClient {
       try {
         this.logger.debug(`HTTP ${method} (第 ${attempt + 1}/${effectiveOptions.retries + 1} 次尝试): ${url}`);
 
+        // 准备请求头
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname;
+        
+        // 构建完整的请求头
+        const headers: Record<string, string> = {
+          ...effectiveOptions.headers
+        };
+        
+        // 添加Referer头（对于非主页请求）
+        if (urlObj.pathname !== '/' && !headers['Referer'] && !headers['referer']) {
+          headers['Referer'] = `${urlObj.protocol}//${domain}/`;
+        }
+        
+        // 添加Cookie头
+        const domainCookies = this.getDomainCookies(domain);
+        if (domainCookies && !headers['Cookie'] && !headers['cookie']) {
+          headers['Cookie'] = domainCookies;
+        }
+
         const config: AxiosRequestConfig = {
           method,
           url,
           timeout: effectiveOptions.timeout,
-          headers: effectiveOptions.headers,
-          data: method === 'POST' ? data : undefined
+          headers,
+          data: method === 'POST' ? data : undefined,
+          maxRedirects: 5, // 允许最多5次重定向
+          validateStatus: (status) => status < 400 // 只有4xx和5xx才被认为是错误
         };
 
         const response: AxiosResponse<T> = await this.axiosInstance(config);
+
+        // 检测重定向
+        if (response.request && response.request.res && response.request.res.responseUrl) {
+          const finalUrl = response.request.res.responseUrl;
+          if (finalUrl !== url) {
+            this.logger.warn(`检测到重定向: ${url} -> ${finalUrl}`);
+            
+            // 检查是否被重定向到主页或登录页
+            const originalDomain = new URL(url).hostname;
+            const finalDomain = new URL(finalUrl).hostname;
+            
+            if (originalDomain === finalDomain) {
+              // 同域重定向，可能是路径变化
+              this.logger.info(`同域重定向: ${url} -> ${finalUrl}`);
+            } else {
+              // 跨域重定向，可能有问题
+              this.logger.error(`跨域重定向: ${url} -> ${finalUrl}`);
+            }
+            
+            // 检查是否重定向到主页
+            const finalPath = new URL(finalUrl).pathname;
+            if (finalPath === '/' || finalPath === '/index.php' || finalPath === '/index.html') {
+              this.logger.error(`可能被重定向到主页，需要鉴权: ${url} -> ${finalUrl}`);
+            }
+          }
+        }
 
         // 检查响应状态
         if (response.status >= 400) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+
+        this.logger.debug(`HTTP ${method} 成功 (${response.status}): ${url}`);
 
         const httpResponse: HttpResponse<T> = {
           data: response.data,
@@ -634,5 +624,73 @@ export class EnhancedHttpClient {
    */
   getConfig(): HttpClientConfig {
     return { ...this.config };
+  }
+
+  /**
+   * 确保会话已初始化
+   * 对于需要鉴权的网站，先访问主页获取必要的cookie
+   */
+  private async ensureSessionInitialized(url: string): Promise<void> {
+    try {
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname;
+      
+      // 检查是否已经初始化过该域名的会话
+      if (this.sessionInitialized.get(domain)) {
+        return;
+      }
+
+      this.logger.info(`初始化会话: ${domain}`);
+      
+      // 访问主页获取初始cookie
+      const homeUrl = `${urlObj.protocol}//${domain}/`;
+      
+      try {
+        const homeResponse = await this.makeRequest<string>('GET', homeUrl, null, {
+          timeout: 10000,
+          skipCache: true
+        });
+        
+        // 提取并保存cookie
+        if (homeResponse.headers && homeResponse.headers['set-cookie']) {
+          const cookies = homeResponse.headers['set-cookie'];
+          if (Array.isArray(cookies)) {
+            cookies.forEach(cookie => {
+              const cookieParts = cookie.split(';')[0].split('=');
+              if (cookieParts.length === 2) {
+                this.sessionCookies.set(`${domain}_${cookieParts[0]}`, cookieParts[1]);
+              }
+            });
+          }
+        }
+        
+        this.sessionInitialized.set(domain, true);
+        this.logger.info(`会话初始化成功: ${domain}`);
+        
+      } catch (error) {
+        this.logger.warn(`会话初始化失败: ${domain}, 错误: ${error instanceof Error ? error.message : String(error)}`);
+        // 即使初始化失败，也标记为已尝试，避免重复尝试
+        this.sessionInitialized.set(domain, true);
+      }
+      
+    } catch (error) {
+      this.logger.error(`会话初始化过程出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * 获取域名的cookie字符串
+   */
+  private getDomainCookies(domain: string): string {
+    const cookies: string[] = [];
+    
+    for (const [key, value] of this.sessionCookies.entries()) {
+      if (key.startsWith(`${domain}_`)) {
+        const cookieName = key.substring(domain.length + 1);
+        cookies.push(`${cookieName}=${value}`);
+      }
+    }
+    
+    return cookies.join('; ');
   }
 }

@@ -1,265 +1,292 @@
+import { createFrontendNetworkError } from './FrontendErrorHandler.ts';
+
 /**
- * 统一API服务
- * 整合所有API调用，提供统一的错误处理和缓存机制
+ * API响应接口
  */
-
-import {
-  frontendErrorHandler,
-  createFrontendNetworkError,
-} from './FrontendErrorHandler.js';
-import type {
-  ApiResponse,
-  SystemConfig,
-  SystemStatus,
-  ValidationResult,
-} from '../../shared/types/core.js';
-
-// API配置
-interface ApiConfig {
-  baseURL: string;
-  timeout: number;
-  retries: number;
-  retryDelay: number;
-  enableCache: boolean;
-  cacheTimeout: number;
+interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
-// 缓存项
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
-
-// 请求选项
-interface RequestOptions {
+/**
+ * HTTP请求配置接口
+ */
+interface RequestConfig {
   timeout?: number;
   retries?: number;
   cache?: boolean;
   cacheTTL?: number;
-  headers?: Record<string, string>;
 }
 
-class ApiService {
-  private config: ApiConfig;
-  private cache = new Map<string, CacheItem<any>>();
-  private abortControllers = new Map<string, AbortController>();
+/**
+ * 缓存条目接口
+ */
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
+}
 
-  constructor(config?: Partial<ApiConfig>) {
-    this.config = {
-      baseURL: '',
-      timeout: 30000,
-      retries: 3,
-      retryDelay: 1000,
-      enableCache: true,
-      cacheTimeout: 60000, // 1分钟
-      ...config,
-    };
-  }
+/**
+ * 统一的API服务类
+ * 提供HTTP请求、错误处理、缓存和重试机制
+ */
+class ApiService {
+  private cache = new Map<string, CacheEntry>();
+  private readonly defaultConfig: RequestConfig = {
+    timeout: 10000,
+    retries: 3,
+    cache: true,
+    cacheTTL: 5 * 60 * 1000, // 5分钟
+  };
 
   /**
-   * GET请求
+   * 发送GET请求
+   * @param url 请求URL
+   * @param config 请求配置
+   * @returns Promise<ApiResponse>
    */
   async get<T = any>(
     url: string,
-    params?: Record<string, any>,
-    options?: RequestOptions
+    config: RequestConfig = {}
   ): Promise<ApiResponse<T>> {
-    const fullUrl = this.buildUrl(url, params);
-    const cacheKey = `GET:${fullUrl}`;
+    const finalConfig = { ...this.defaultConfig, ...config };
+    const cacheKey = `GET:${url}`;
 
     // 检查缓存
-    if (options?.cache !== false && this.config.enableCache) {
-      const cached = this.getFromCache<T>(cacheKey);
-      if (cached) {
-        return {
-          status: 'success',
-          message: '操作成功',
-          data: cached,
-          error: null,
-          timestamp: new Date(),
-        };
+    if (finalConfig.cache && this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey)!;
+      if (Date.now() - cached.timestamp < cached.ttl) {
+        return cached.data;
       }
+      this.cache.delete(cacheKey);
     }
 
-    return this.request<T>('GET', fullUrl, undefined, options, cacheKey);
+    return this.executeRequest('GET', url, null, finalConfig, cacheKey);
   }
 
   /**
-   * POST请求
+   * 发送POST请求
+   * @param url 请求URL
+   * @param data 请求数据
+   * @param config 请求配置
+   * @returns Promise<ApiResponse>
    */
   async post<T = any>(
     url: string,
-    data?: any,
-    options?: RequestOptions
+    data: any = null,
+    config: RequestConfig = {}
   ): Promise<ApiResponse<T>> {
-    const fullUrl = this.buildUrl(url);
-    return this.request<T>('POST', fullUrl, data, options);
+    const finalConfig = { ...this.defaultConfig, ...config };
+    return this.executeRequest('POST', url, data, finalConfig);
   }
 
-  private async request<T>(
-    method: string,
+  /**
+   * 发送PATCH请求
+   * @param url 请求URL
+   * @param data 请求数据
+   * @param config 请求配置
+   * @returns Promise<ApiResponse>
+   */
+  async patch<T = any>(
     url: string,
-    data?: any,
-    options?: RequestOptions,
+    data: any = null,
+    config: RequestConfig = {}
+  ): Promise<ApiResponse<T>> {
+    const finalConfig = { ...this.defaultConfig, ...config };
+    return this.executeRequest('PATCH', url, data, finalConfig);
+  }
+
+  /**
+   * 执行HTTP请求
+   * @param method HTTP方法
+   * @param url 请求URL
+   * @param data 请求数据
+   * @param config 请求配置
+   * @param cacheKey 缓存键
+   * @returns Promise<ApiResponse>
+   */
+  private async executeRequest<T = any>(
+    method: 'GET' | 'POST' | 'PATCH',
+    url: string,
+    data: any,
+    config: RequestConfig,
     cacheKey?: string
   ): Promise<ApiResponse<T>> {
-    const requestId = `${method}:${url}`;
-    
-    try {
-      // 创建AbortController
-      const controller = new AbortController();
-      this.abortControllers.set(requestId, controller);
+    let lastError: Error | null = null;
 
-      const fetchOptions: RequestInit = {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        signal: controller.signal,
-      };
-
-      if (data && method !== 'GET') {
-        fetchOptions.body = JSON.stringify(data);
-      }
-
-      const response = await fetch(url, fetchOptions);
-      
-      if (!response.ok) {
-        const error = createFrontendNetworkError(
-          new Error(`HTTP ${response.status}: ${response.statusText}`),
-          url
+    for (let attempt = 1; attempt <= (config.retries || 1); attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(
+          () => controller.abort(),
+          config.timeout || 10000
         );
-        throw error;
-      }
 
-      const result = await response.json();
-      
-      // 缓存成功的GET请求结果
-      if (method === 'GET' && cacheKey && result.status === 'success') {
-        this.setCache(cacheKey, result.data, options?.cacheTTL);
-      }
+        const requestOptions: RequestInit = {
+          method,
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
 
-      return result;
-    } catch (error: any) {
-      const appError = frontendErrorHandler.handle(error);
-      return {
-        status: 'error',
-        message: appError.message,
-        data: null,
-        error: appError,
-        timestamp: new Date(),
-      };
-    } finally {
-      this.abortControllers.delete(requestId);
-    }
-  }
-
-  private buildUrl(path: string, params?: Record<string, any>): string {
-    const url = new URL(path, this.config.baseURL || window.location.origin);
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
+        if (data && (method === 'POST' || method === 'PATCH')) {
+          requestOptions.body = JSON.stringify(data);
         }
-      });
+
+        const response = await fetch(url, requestOptions);
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result: ApiResponse<T> = await response.json();
+
+        // 缓存成功的GET请求结果
+        if (
+          method === 'GET' &&
+          config.cache &&
+          cacheKey &&
+          result.status === 'success'
+        ) {
+          this.cache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now(),
+            ttl: config.cacheTTL || this.defaultConfig.cacheTTL!,
+          });
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error as Error;
+
+        // 如果是最后一次尝试，抛出错误
+        if (attempt === config.retries) {
+          break;
+        }
+
+        // 等待后重试
+        await this.delay(Math.pow(2, attempt - 1) * 1000);
+      }
     }
 
-    return url.toString();
-  }
+    // 处理最终错误
+    createFrontendNetworkError(lastError || new Error('Request failed'), url);
 
-  private getFromCache<T>(key: string): T | null {
-    const item = this.cache.get(key);
-    if (!item) return null;
-
-    if (Date.now() - item.timestamp > item.ttl) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return item.data;
-  }
-
-  private setCache<T>(key: string, data: T, ttl?: number): void {
-    if (!this.config.enableCache) return;
-
-    const item: CacheItem<T> = {
-      data,
-      timestamp: Date.now(),
-      ttl: ttl || this.config.cacheTimeout,
+    return {
+      status: 'error',
+      error: lastError?.message || 'Request failed',
     };
+  }
 
-    this.cache.set(key, item);
+  /**
+   * 延迟执行
+   * @param ms 延迟毫秒数
+   * @returns Promise<void>
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
-    // 清理过期缓存
-    if (this.cache.size > 100) {
-      const now = Date.now();
-      for (const [k, v] of this.cache.entries()) {
-        if (now - v.timestamp > v.ttl) {
-          this.cache.delete(k);
-        }
+  /**
+   * 清理过期缓存
+   */
+  clearExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp >= entry.ttl) {
+        this.cache.delete(key);
       }
     }
+  }
+
+  /**
+   * 清空所有缓存
+   */
+  clearAllCache(): void {
+    this.cache.clear();
   }
 }
 
-// 创建全局实例
-export const apiService = new ApiService();
+// 创建单例实例
+const apiService = new ApiService();
 
 /**
- * 系统API
+ * 系统相关API
  */
 export class SystemAPI {
   /**
    * 获取系统配置
+   * @returns Promise<ApiResponse>
    */
-  static async getConfig(): Promise<ApiResponse<SystemConfig>> {
-    return apiService.get<SystemConfig>('/api/getConfig');
-  }
-
-  /**
-   * 保存系统配置
-   */
-  static async saveConfig(
-    config: Partial<SystemConfig>
-  ): Promise<ApiResponse<boolean>> {
-    return apiService.post<boolean>('/api/saveConfig', config);
+  static async getConfig(): Promise<ApiResponse> {
+    return apiService.get('/api/config', { cache: true, cacheTTL: 5000 });
   }
 
   /**
    * 更新系统配置
+   * @param config - 配置对象
+   * @returns Promise<ApiResponse<any>>
    */
-  static async updateConfig(
-    config: Partial<SystemConfig>
-  ): Promise<ApiResponse<SystemConfig>> {
-    return apiService.post<SystemConfig>('/api/updateConfig', config);
+  static async updateConfig(config: any): Promise<ApiResponse<any>> {
+    return apiService.post('/api/saveConfig', config);
   }
 
   /**
    * 获取系统状态
+   * @returns Promise<ApiResponse>
    */
-  static async getStatus(): Promise<ApiResponse<SystemStatus>> {
-    return apiService.get<SystemStatus>('/api/getStatus');
+  static async getStatus(): Promise<ApiResponse> {
+    return apiService.get('/api/getStatus', { cache: true, cacheTTL: 2000 });
+  }
+
+  /**
+   * 获取系统日志
+   * @param limit 日志条数限制
+   * @returns Promise<ApiResponse>
+   */
+  static async getLogs(limit: number = 100): Promise<ApiResponse> {
+    return apiService.get(`/api/getLogs?limit=${limit}`, { cache: false });
   }
 }
 
 /**
- * 任务API
+ * 任务相关API
  */
 export class TaskAPI {
   /**
-   * 执行一次任务
+   * 立即运行一次任务
+   * @returns Promise<ApiResponse>
    */
-  static async runOnce(): Promise<ApiResponse<boolean>> {
-    return apiService.get<boolean>('/api/runOnce');
+  static async runOnce(): Promise<ApiResponse> {
+    return apiService.get('/api/runOnce');
   }
 
   /**
-   * 取消任务
+   * 取消当前任务
+   * @returns Promise<ApiResponse>
    */
-  static async cancel(): Promise<ApiResponse<boolean>> {
-    return apiService.get<boolean>('/api/cancel');
+  static async cancel(): Promise<ApiResponse> {
+    return apiService.get('/api/cancel');
+  }
+
+  /**
+   * 获取任务历史
+   * @param limit 历史记录条数限制
+   * @returns Promise<ApiResponse>
+   */
+  static async getHistory(limit: number = 50): Promise<ApiResponse> {
+    return apiService.get(`/api/task/history?limit=${limit}`);
   }
 }
+
+// 定期清理过期缓存
+setInterval(() => {
+  apiService.clearExpiredCache();
+}, 5 * 60 * 1000); // 每5分钟清理一次
+
+export { apiService as ApiService };

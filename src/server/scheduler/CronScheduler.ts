@@ -1,12 +1,12 @@
 // Cron调度器模块
 import cron from 'node-cron';
 import type { ScheduledTask } from 'node-cron';
-import { Logger } from '../utils/logger.js';
-import { ScraperEngine } from '../scraper/ScraperEngine.js';
-import { ConfigManager } from '../scraper/ConfigManager.js';
-import { FileGenerator } from '../scraper/FileGenerator.js';
-import { CronConfigManager } from './CronConfigManager.js';
-import type { ScrapingResult } from '../../shared/types/scraper.js';
+import { Logger } from '../utils/logger.ts';
+import { ScraperEngine } from '../scraper/ScraperEngine.ts';
+import { ConfigManager } from '../scraper/ConfigManager.ts';
+import { FileGenerator } from '../scraper/FileGenerator.ts';
+import { CronConfigManager } from './CronConfigManager.ts';
+import type { ScrapingResult } from '../../shared/types/scraper.ts';
 
 export interface CronSchedulerOptions {
   configDir?: string;

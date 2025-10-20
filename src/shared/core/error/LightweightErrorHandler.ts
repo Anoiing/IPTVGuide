@@ -7,7 +7,7 @@ import type {
   ErrorContext, 
   AppError, 
   ErrorHandlerConfig 
-} from './types.js';
+} from './types.ts';
 
 // 定义错误类型枚举（前端兼容版本）
 export enum ErrorType {

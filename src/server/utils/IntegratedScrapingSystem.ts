@@ -1,9 +1,9 @@
 // 集成的爬取系统 - 简化版本
-import { ScraperEngine } from '../scraper/ScraperEngine.js';
-import { ScrapingLogger } from './ScrapingLogger.js';
-import { progressMonitor } from './ProgressMonitor.js';
-import { monitoringService } from './MonitoringService.js';
-import type { ScrapingResult } from '../../shared/types/scraper.js';
+import { ScraperEngine } from '../scraper/ScraperEngine.ts';
+import { ScrapingLogger } from './ScrapingLogger.ts';
+import { progressMonitor } from './ProgressMonitor.ts';
+import { monitoringService } from './MonitoringService.ts';
+import type { ScrapingResult } from '../../shared/types/scraper.ts';
 
 export class IntegratedScrapingSystem {
   private scraperEngine: ScraperEngine;

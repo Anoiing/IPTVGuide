@@ -11,4 +11,4 @@ export type {
   TaskError,
   SystemConfig,
   RequestOptions
-} from '../core/types/index.js';
+} from '../core/types/index.ts';

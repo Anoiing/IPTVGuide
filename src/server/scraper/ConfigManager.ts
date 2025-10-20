@@ -6,11 +6,11 @@
  */
 import fs from 'fs';
 import path from 'path';
-import type { ConfigManager as IConfigManager } from '../../shared/types/interfaces.js';
-import type { SystemConfig } from '../../shared/types/scraper.js';
-import { Logger } from '../utils/logger.js';
-import { isValidCronExpression } from '../utils/validation.js';
-import { validateCronInterval } from '../utils/cronValidator.js';
+import type { ConfigManager as IConfigManager } from '../../shared/types/interfaces.ts';
+import type { SystemConfig } from '../../shared/types/scraper.ts';
+import { Logger } from '../utils/logger.ts';
+import { isValidCronExpression } from '../utils/validation.ts';
+import { validateCronInterval } from '../utils/cronValidator.ts';
 
 /**
  * 配置管理器类

@@ -1,9 +1,9 @@
 // 文件生成模块
 import fs from 'fs';
 import path from 'path';
-import type { FileGenerator as IFileGenerator } from '../../shared/types/interfaces.js';
-import type { ChannelInfo } from '../../shared/types/scraper.js';
-import { Logger } from '../utils/logger.js';
+import type { FileGenerator as IFileGenerator } from '../../shared/types/interfaces.ts';
+import type { ChannelInfo } from '../../shared/types/scraper.ts';
+import { Logger } from '../utils/logger.ts';
 
 export class FileGenerator implements IFileGenerator {
   private outputDir: string;

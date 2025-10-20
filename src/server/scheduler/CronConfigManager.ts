@@ -1,8 +1,8 @@
 // Cron配置管理模块
 import cron from 'node-cron';
-import { ConfigManager } from '../scraper/ConfigManager.js';
-import { Logger } from '../utils/logger.js';
-import type { SystemConfig } from '../../shared/types/scraper.js';
+import { ConfigManager } from '../scraper/ConfigManager.ts';
+import { Logger } from '../utils/logger.ts';
+import type { SystemConfig } from '../../shared/types/scraper.ts';
 
 export interface CronConfig {
   expression: string;

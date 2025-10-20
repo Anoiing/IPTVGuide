@@ -5,10 +5,10 @@
 
 import fs from 'fs';
 import path from 'path';
-import { LogLevel } from './types.js';
-import type { LogEntry, LoggerConfig, LogFilter, LogStats } from './types.js';
-import { formatTimestamp } from '../utils/validation.js';
-import type { ErrorType } from '../../shared/core/error/types.js';
+import { LogLevel } from './types.ts';
+import type { LogEntry, LoggerConfig, LogFilter, LogStats } from './types.ts';
+import { formatTimestamp } from '../utils/validation.ts';
+import type { ErrorType } from '../../shared/core/error/types.ts';
 import zlib from 'zlib';
 
 export class Logger {
@@ -22,7 +22,7 @@ export class Logger {
     this.configDir = configDir;
     this.logFilePath = `${configDir}/app.log`;
     this.compressedLogDir = `${configDir}/logs`;
-    
+
     this.config = {
       level: LogLevel.INFO,
       enableConsole: true,
@@ -36,7 +36,7 @@ export class Logger {
 
     // 确保日志目录存在
     this.ensureLogDirectories();
-    
+
     // 初始化日志缓冲区
     this.initializeLogBuffer();
   }
@@ -108,8 +108,15 @@ export class Logger {
           ...error,
         }
       : undefined;
-      
-    this.writeLog(LogLevel.ERROR, message, context, category, taskId, errorType);
+
+    this.writeLog(
+      LogLevel.ERROR,
+      message,
+      context,
+      category,
+      taskId,
+      errorType
+    );
   }
 
   /**
@@ -159,30 +166,34 @@ export class Logger {
     let filtered = [...this.logBuffer];
 
     if (filter.level !== undefined) {
-      filtered = filtered.filter(entry => entry.level >= filter.level!);
+      filtered = filtered.filter((entry) => entry.level >= filter.level!);
     }
 
     if (filter.category) {
-      filtered = filtered.filter(entry => entry.category === filter.category);
+      filtered = filtered.filter((entry) => entry.category === filter.category);
     }
 
     if (filter.taskId) {
-      filtered = filtered.filter(entry => entry.taskId === filter.taskId);
+      filtered = filtered.filter((entry) => entry.taskId === filter.taskId);
     }
 
     if (filter.startDate) {
-      filtered = filtered.filter(entry => entry.timestamp >= filter.startDate!);
+      filtered = filtered.filter(
+        (entry) => entry.timestamp >= filter.startDate!
+      );
     }
 
     if (filter.endDate) {
-      filtered = filtered.filter(entry => entry.timestamp <= filter.endDate!);
+      filtered = filtered.filter((entry) => entry.timestamp <= filter.endDate!);
     }
 
     if (filter.searchTerm) {
       const term = filter.searchTerm.toLowerCase();
-      filtered = filtered.filter(entry => 
-        entry.message.toLowerCase().includes(term) ||
-        (entry.context && JSON.stringify(entry.context).toLowerCase().includes(term))
+      filtered = filtered.filter(
+        (entry) =>
+          entry.message.toLowerCase().includes(term) ||
+          (entry.context &&
+            JSON.stringify(entry.context).toLowerCase().includes(term))
       );
     }
 
@@ -197,7 +208,12 @@ export class Logger {
     if (entries.length === 0) {
       return {
         totalEntries: 0,
-        byLevel: { [LogLevel.DEBUG]: 0, [LogLevel.INFO]: 0, [LogLevel.WARN]: 0, [LogLevel.ERROR]: 0 },
+        byLevel: {
+          [LogLevel.DEBUG]: 0,
+          [LogLevel.INFO]: 0,
+          [LogLevel.WARN]: 0,
+          [LogLevel.ERROR]: 0,
+        },
         byCategory: {},
         errorsByType: {
           VALIDATION_ERROR: 0,
@@ -212,16 +228,21 @@ export class Logger {
           SCHEDULING_ERROR: 0,
           MEMORY_ERROR: 0,
           SYSTEM_ERROR: 0,
-          UNKNOWN_ERROR: 0
+          UNKNOWN_ERROR: 0,
         },
         startDate: new Date(),
-        endDate: new Date()
+        endDate: new Date(),
       };
     }
 
     const stats: LogStats = {
       totalEntries: entries.length,
-      byLevel: { [LogLevel.DEBUG]: 0, [LogLevel.INFO]: 0, [LogLevel.WARN]: 0, [LogLevel.ERROR]: 0 },
+      byLevel: {
+        [LogLevel.DEBUG]: 0,
+        [LogLevel.INFO]: 0,
+        [LogLevel.WARN]: 0,
+        [LogLevel.ERROR]: 0,
+      },
       byCategory: {},
       errorsByType: {
         VALIDATION_ERROR: 0,
@@ -236,24 +257,28 @@ export class Logger {
         SCHEDULING_ERROR: 0,
         MEMORY_ERROR: 0,
         SYSTEM_ERROR: 0,
-        UNKNOWN_ERROR: 0
+        UNKNOWN_ERROR: 0,
       },
-      startDate: new Date(Math.min(...entries.map(e => e.timestamp.getTime()))),
-      endDate: new Date(Math.max(...entries.map(e => e.timestamp.getTime())))
+      startDate: new Date(
+        Math.min(...entries.map((e) => e.timestamp.getTime()))
+      ),
+      endDate: new Date(Math.max(...entries.map((e) => e.timestamp.getTime()))),
     };
 
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       // 按级别统计
       stats.byLevel[entry.level] = (stats.byLevel[entry.level] || 0) + 1;
-      
+
       // 按类别统计
       if (entry.category) {
-        stats.byCategory[entry.category] = (stats.byCategory[entry.category] || 0) + 1;
+        stats.byCategory[entry.category] =
+          (stats.byCategory[entry.category] || 0) + 1;
       }
-      
+
       // 按错误类型统计
       if (entry.errorType) {
-        stats.errorsByType[entry.errorType] = (stats.errorsByType[entry.errorType] || 0) + 1;
+        stats.errorsByType[entry.errorType] =
+          (stats.errorsByType[entry.errorType] || 0) + 1;
       }
     });
 
@@ -275,13 +300,15 @@ export class Logger {
    */
   exportLogs(filePath: string, filter?: LogFilter): void {
     let entries = filter ? this.queryLogs(filter) : this.logBuffer;
-    
-    const logData = entries.map(entry => 
-      this.config.enableJsonFormat 
-        ? JSON.stringify(entry) 
-        : this.formatLogEntry(entry)
-    ).join('\n');
-    
+
+    const logData = entries
+      .map((entry) =>
+        this.config.enableJsonFormat
+          ? JSON.stringify(entry)
+          : this.formatLogEntry(entry)
+      )
+      .join('\n');
+
     fs.writeFileSync(filePath, logData, 'utf8');
   }
 
@@ -310,7 +337,7 @@ export class Logger {
         category,
         taskId,
         errorType,
-        stackTrace: context?.stack
+        stackTrace: context?.stack,
       };
 
       this.logBuffer.push(entry);
@@ -346,8 +373,11 @@ export class Logger {
 
     logLine += ` ${entry.message}`;
 
-    // 添加上下文信息（仅在DEBUG级别显示）
-    if (entry.context && entry.level === LogLevel.DEBUG) {
+    // 添加上下文信息（在DEBUG和ERROR级别显示）
+    if (
+      entry.context &&
+      (entry.level === LogLevel.DEBUG || entry.level === LogLevel.ERROR)
+    ) {
       logLine += `\n  Context: ${JSON.stringify(entry.context, null, 2)}`;
     }
 
@@ -376,10 +406,10 @@ export class Logger {
         }
       }
 
-      const logLine = this.config.enableJsonFormat 
-        ? JSON.stringify(entry) 
+      const logLine = this.config.enableJsonFormat
+        ? JSON.stringify(entry)
         : this.formatLogEntry(entry);
-        
+
       fs.appendFileSync(this.logFilePath, logLine + '\n', 'utf8');
     } catch (error) {
       console.error('Failed to write log to file:', error);
@@ -417,8 +447,9 @@ export class Logger {
       }
 
       // 获取现有的日志文件列表
-      const existingLogs = fs.readdirSync(this.compressedLogDir)
-        .filter(file => file.startsWith('app.log.'))
+      const existingLogs = fs
+        .readdirSync(this.compressedLogDir)
+        .filter((file) => file.startsWith('app.log.'))
         .sort()
         .reverse();
 
@@ -442,9 +473,9 @@ export class Logger {
         const gzip = zlib.createGzip();
         const input = fs.createReadStream(newLogPath);
         const output = fs.createWriteStream(compressedPath);
-        
+
         input.pipe(gzip).pipe(output);
-        
+
         // 压缩完成后删除原始文件
         output.on('finish', () => {
           fs.unlinkSync(newLogPath);
@@ -461,7 +492,7 @@ export class Logger {
       if (!fs.existsSync(this.configDir)) {
         fs.mkdirSync(this.configDir, { recursive: true });
       }
-      
+
       // 确保压缩日志目录存在
       if (!fs.existsSync(this.compressedLogDir)) {
         fs.mkdirSync(this.compressedLogDir, { recursive: true });
@@ -476,11 +507,11 @@ export class Logger {
       // 尝试从现有日志文件加载最近的日志条目
       if (fs.existsSync(this.logFilePath)) {
         const logData = fs.readFileSync(this.logFilePath, 'utf8');
-        const lines = logData.split('\n').filter(line => line.trim() !== '');
-        
+        const lines = logData.split('\n').filter((line) => line.trim() !== '');
+
         // 只加载最近的1000条日志到缓冲区
         const recentLines = lines.slice(-1000);
-        
+
         for (const line of recentLines) {
           try {
             if (this.config.enableJsonFormat && line.startsWith('{')) {

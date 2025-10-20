@@ -7,4 +7,4 @@ export type {
   ScraperEngine,
   ConfigManager,
   FileGenerator
-} from '../core/interfaces.js';
+} from '../core/interfaces.ts';

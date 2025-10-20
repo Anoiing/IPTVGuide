@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { errorHandler, ErrorType } from './ErrorHandler.js';
+import { errorHandler, ErrorType } from './ErrorHandler.ts';
 
 export interface ConfigSchema {
   [key: string]: {

@@ -3,8 +3,8 @@
  * 负责系统监控、警报管理和性能分析
  */
 
-import { progressMonitor, type PerformanceMetrics } from './ProgressMonitor.js';
-import { errorHandler } from '../../shared/core/ErrorHandler.js';
+import { progressMonitor, type PerformanceMetrics } from './ProgressMonitor.ts';
+import { errorHandler } from '../../shared/core/ErrorHandler.ts';
 
 export interface MonitoringConfig {
   enabled: boolean;
@@ -46,6 +46,9 @@ export class MonitoringService {
     };
   }
 
+  /**
+   * 启动监控服务
+   */
   start(): void {
     if (!this.config.enabled || this.isRunning) return;
 
@@ -54,6 +57,9 @@ export class MonitoringService {
     console.log('监控服务已启动');
   }
 
+  /**
+   * 停止监控服务
+   */
   stop(): void {
     if (!this.isRunning) return;
 
@@ -74,6 +80,9 @@ export class MonitoringService {
     }, this.config.checkInterval);
   }
 
+  /**
+   * 执行健康检查
+   */
   private async performHealthCheck(): Promise<void> {
     try {
       // 检查任务性能

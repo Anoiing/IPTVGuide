@@ -7,26 +7,26 @@ import type {
   ChannelInfo, 
   IPInfo,
   ChannelValidationResult
-} from './types/channel.js';
+} from './types/channel.ts';
 
 import type {
   ScrapingResult,
   ScrapingStatus,
   ScrapingTask,
   ScrapingDecision
-} from './types/scraper.js';
+} from './types/scraper.ts';
 
 import type {
   SystemConfig,
   RequestOptions
-} from './types/config.js';
+} from './types/config.ts';
 
 import type {
   ChannelCheckConfig,
   CheckStatus,
   ChannelCheckResult,
   ChannelCheck
-} from './types/monitoring.js';
+} from './types/monitoring.ts';
 
 // HTTP客户端接口
 export interface HttpClient {

@@ -1,41 +1,45 @@
 /**
- * 错误类型枚举
+ * 错误类型常量
  * 定义系统中所有可能的错误类型
  */
-export enum ErrorType {
+export const ErrorType = {
   // 验证错误
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
 
   // HTTP错误
-  HTTP_ERROR = 'HTTP_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
+  HTTP_ERROR: 'HTTP_ERROR',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  TIMEOUT_ERROR: 'TIMEOUT_ERROR',
 
   // 文件系统错误
-  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
-  FILE_PERMISSION_ERROR = 'FILE_PERMISSION_ERROR',
-  DISK_SPACE_ERROR = 'DISK_SPACE_ERROR',
+  FILE_NOT_FOUND: 'FILE_NOT_FOUND',
+  FILE_PERMISSION_ERROR: 'FILE_PERMISSION_ERROR',
+  DISK_SPACE_ERROR: 'DISK_SPACE_ERROR',
 
   // 业务逻辑错误
-  PARSING_ERROR = 'PARSING_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
-  SCHEDULING_ERROR = 'SCHEDULING_ERROR',
+  PARSING_ERROR: 'PARSING_ERROR',
+  CONFIGURATION_ERROR: 'CONFIGURATION_ERROR',
+  SCHEDULING_ERROR: 'SCHEDULING_ERROR',
 
   // 系统错误
-  MEMORY_ERROR = 'MEMORY_ERROR',
-  SYSTEM_ERROR = 'SYSTEM_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-}
+  MEMORY_ERROR: 'MEMORY_ERROR',
+  SYSTEM_ERROR: 'SYSTEM_ERROR',
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+} as const;
+
+export type ErrorType = typeof ErrorType[keyof typeof ErrorType];
 
 /**
- * 错误严重程度枚举
+ * 错误严重程度常量
  */
-export enum ErrorSeverity {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
-}
+export const ErrorSeverity = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  CRITICAL: 'CRITICAL',
+} as const;
+
+export type ErrorSeverity = typeof ErrorSeverity[keyof typeof ErrorSeverity];
 
 /**
  * 错误上下文接口

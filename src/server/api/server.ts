@@ -3,12 +3,12 @@ import cron from 'node-cron';
 import express from 'express';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { ScraperEngine } from '../scraper/ScraperEngine.js';
-import { ConfigManager } from '../scraper/ConfigManager.js';
-import { FileGenerator } from '../scraper/FileGenerator.js';
-import { Logger } from '../utils/logger.js';
-import { CronScheduler } from '../scheduler/CronScheduler.js';
-import type { ScrapingResult } from '../../shared/types/scraper.js';
+import { ScraperEngine } from '../scraper/ScraperEngine.ts';
+import { ConfigManager } from '../scraper/ConfigManager.ts';
+import { FileGenerator } from '../scraper/FileGenerator.ts';
+import { Logger } from '../utils/logger.ts';
+import { CronScheduler } from '../scheduler/CronScheduler.ts';
+import type { ScrapingResult } from '../../shared/types/scraper.ts';
 
 // Initialize app outside try block for export
 const app = express();
@@ -19,18 +19,18 @@ try {
   app.use(cors());
   app.use(express.json());
 
-  const CONFIG_DIR = process.env.CONFIG_DIR || './config';
-  const OUT_DIR = process.env.OUT_DIR || './output';
+  const configDir = process.env.CONFIG_DIR || './config';
+  const outDir = process.env.OUT_DIR || './output';
   const TZ = process.env.TZ || 'Asia/Shanghai';
 
-  // 初始化新的模块
-  const configManager = new ConfigManager(CONFIG_DIR);
-  const scraperEngine = new ScraperEngine(CONFIG_DIR);
-  const fileGenerator = new FileGenerator(OUT_DIR);
-  const logger = new Logger(CONFIG_DIR);
+  // 初始化服务
+  const configManager = new ConfigManager(configDir);
+  const scraperEngine = new ScraperEngine(configDir);
+  const fileGenerator = new FileGenerator(outDir);
+  const logger = new Logger(configDir);
   const cronScheduler = new CronScheduler({
-    configDir: CONFIG_DIR,
-    outputDir: OUT_DIR,
+    configDir: configDir,
+    outputDir: outDir,
     timezone: TZ,
   });
 
@@ -280,7 +280,7 @@ try {
     try {
       let logs = '';
       try {
-        const logFile = `${CONFIG_DIR}/log.txt`;
+        const logFile = `${configDir}/log.txt`;
         if (fs.existsSync(logFile)) {
           const allLogs = fs.readFileSync(logFile, 'utf8');
           const lines = allLogs.split('\n');
@@ -371,7 +371,7 @@ try {
   // 清空日志
   app.get('/api/clearLog', async (req, res) => {
     try {
-      const logFile = `${CONFIG_DIR}/log.txt`;
+      const logFile = `${configDir}/log.txt`;
       fs.writeFileSync(logFile, '');
       logger.info('Log file cleared via API');
       res.send(response.success(true));

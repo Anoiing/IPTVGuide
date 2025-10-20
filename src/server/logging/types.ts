@@ -2,17 +2,19 @@
  * 增强日志系统接口定义
  */
 
-import type { ErrorType } from '../../shared/core/error/types.js';
+import type { ErrorType } from '../../shared/core/error/types.ts';
 
 /**
- * 日志级别枚举
+ * 日志级别常量
  */
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
-}
+export const LogLevel = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3,
+} as const;
+
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 /**
  * 日志条目接口

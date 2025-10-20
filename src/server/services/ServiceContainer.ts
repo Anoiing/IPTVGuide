@@ -3,15 +3,14 @@
  * 提供依赖注入和模块管理功能
  */
 
-import { Logger } from '../utils/logger.js';
-import { EnhancedConfigManager } from '../config/index.js';
-import { EnhancedHttpClient } from '../http/index.js';
-import { ChannelAvailabilityMonitorImpl } from '../monitoring/index.js';
-import { ConfigManager } from '../scraper/ConfigManager.js';
-import { ScraperEngine } from '../scraper/ScraperEngine.js';
-import { FileGenerator } from '../scraper/FileGenerator.js';
-import { HtmlParser } from '../scraper/HtmlParser.js';
-import { HttpClient } from '../scraper/HttpClient.js';
+import { Logger } from '../utils/logger.ts';
+import { EnhancedConfigManager } from '../config/index.ts';
+import { EnhancedHttpClient } from '../http/index.ts';
+import { ChannelAvailabilityMonitorImpl } from '../monitoring/index.ts';
+import { ConfigManager } from '../scraper/ConfigManager.ts';
+import { ScraperEngine } from '../scraper/ScraperEngine.ts';
+import { FileGenerator } from '../scraper/FileGenerator.ts';
+import { HtmlParser } from '../scraper/HtmlParser.ts';
 
 export interface ServiceContainerConfig {
   configDir: string;
@@ -60,21 +59,17 @@ export class ServiceContainer {
         this.registerSingleton('configManager', () => new ConfigManager(this.config.configDir));
       }
 
-      // 注册HTTP客户端
-      if (this.config.enableEnhancedServices) {
-        this.registerSingleton('httpClient', () => 
-          new EnhancedHttpClient(this.config.configDir, {
-            maxConcurrentRequests: 5,
-            rateLimit: 2,
-            enableCaching: true,
-            cacheTTL: 300000,
-            timeout: 30000,
-            maxRetries: 3
-          })
-        );
-      } else {
-        this.registerSingleton('httpClient', () => new HttpClient(this.config.configDir));
-      }
+      // 注册HTTP客户端 - 统一使用EnhancedHttpClient
+      this.registerSingleton('httpClient', () => 
+        new EnhancedHttpClient(this.config.configDir, {
+          maxConcurrentRequests: this.config.enableEnhancedServices ? 10 : 5,
+          rateLimit: this.config.enableEnhancedServices ? 5 : 2,
+          enableCaching: true,
+          cacheTTL: 300000,
+          timeout: 30000,
+          maxRetries: 3
+        })
+      );
 
       // 注册其他服务
       this.registerSingleton('htmlParser', () => new HtmlParser(this.config.configDir));

@@ -1,87 +1,20 @@
 /**
  * 前端错误处理器
- * 专为浏览器环境设计的轻量级错误处理模块
+ * 基于共享错误处理器的前端适配版本
  */
 
-// 定义错误类型枚举（前端兼容版本）
-export enum ErrorType {
-  // 验证错误
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
+import { 
+  ErrorType, 
+  ErrorSeverity, 
+  type ErrorContext, 
+  type AppError, 
+  type ErrorHandlerConfig 
+} from '../../shared/core/error/types.ts';
 
-  // HTTP错误
-  HTTP_ERROR = 'HTTP_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
-
-  // 文件系统错误
-  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
-  FILE_PERMISSION_ERROR = 'FILE_PERMISSION_ERROR',
-  DISK_SPACE_ERROR = 'DISK_SPACE_ERROR',
-
-  // 业务逻辑错误
-  PARSING_ERROR = 'PARSING_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
-  SCHEDULING_ERROR = 'SCHEDULING_ERROR',
-
-  // 系统错误
-  MEMORY_ERROR = 'MEMORY_ERROR',
-  SYSTEM_ERROR = 'SYSTEM_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-}
-
-// 定义错误严重程度枚举（前端兼容版本）
-export enum ErrorSeverity {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
-}
-
-// 定义错误上下文接口
-export interface ErrorContext {
-  method?: string;
-  path?: string;
-  body?: any;
-  query?: any;
-  url?: string;
-  status?: number;
-  code?: string;
-  field?: string;
-  value?: any;
-  rule?: string;
-  operation?: string;
-  filePath?: string;
-  expression?: string;
-  component?: string;
-  userId?: string;
-  sessionId?: string;
-  requestId?: string;
-  [key: string]: any;
-}
-
-// 定义应用错误接口
-export interface AppError {
-  id: string;
-  type: ErrorType;
-  severity: ErrorSeverity;
-  message: string;
-  originalError?: Error;
-  details?: any;
-  timestamp: Date;
-  stack?: string;
-  context?: ErrorContext;
-  recoverable: boolean;
-  retryable: boolean;
-}
-
-// 定义错误处理器配置接口
-export interface ErrorHandlerConfig {
-  enableLogging: boolean;
-  enableNotification: boolean;
-  maxRetries: number;
-  retryDelay: number;
-}
-
+/**
+ * 前端错误处理器类
+ * 提供前端专用的错误处理功能
+ */
 export class FrontendErrorHandler {
   private config: ErrorHandlerConfig;
   private errorListeners: ((error: AppError) => void)[] = [];
@@ -98,6 +31,9 @@ export class FrontendErrorHandler {
 
   /**
    * 处理错误
+   * @param error - 错误对象
+   * @param context - 错误上下文
+   * @returns 应用错误对象
    */
   handle(error: Error | AppError | any, context?: ErrorContext): AppError {
     const appError = this.normalizeError(error, context);
@@ -114,7 +50,12 @@ export class FrontendErrorHandler {
   }
 
   /**
-   * 创建特定类型的错误
+   * 创建应用错误
+   * @param type - 错误类型
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param severity - 错误严重程度
+   * @returns 应用错误对象
    */
   createError(
     type: ErrorType,
@@ -137,6 +78,10 @@ export class FrontendErrorHandler {
 
   /**
    * HTTP错误处理
+   * @param url - 请求URL
+   * @param status - HTTP状态码
+   * @param message - 错误消息
+   * @returns 应用错误对象
    */
   handleHttpError(url: string, status: number, message: string): AppError {
     const appError = this.createError(
@@ -151,6 +96,9 @@ export class FrontendErrorHandler {
 
   /**
    * 网络错误处理
+   * @param error - 网络错误对象
+   * @param url - 请求URL
+   * @returns 应用错误对象
    */
   handleNetworkError(error: any, url?: string): AppError {
     const appError = this.createError(
@@ -165,6 +113,10 @@ export class FrontendErrorHandler {
 
   /**
    * 验证错误处理
+   * @param field - 字段名
+   * @param value - 字段值
+   * @param rule - 验证规则
+   * @returns 应用错误对象
    */
   handleValidationError(field: string, value: any, rule: string): AppError {
     const appError = this.createError(
@@ -179,6 +131,9 @@ export class FrontendErrorHandler {
 
   /**
    * 配置错误处理
+   * @param message - 错误消息
+   * @param config - 配置对象
+   * @returns 应用错误对象
    */
   handleConfigError(message: string, config?: any): AppError {
     const appError = this.createError(
@@ -193,6 +148,9 @@ export class FrontendErrorHandler {
 
   /**
    * 解析错误处理
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @returns 应用错误对象
    */
   handleParsingError(message: string, details?: any): AppError {
     const appError = this.createError(
@@ -207,6 +165,9 @@ export class FrontendErrorHandler {
 
   /**
    * 爬取错误处理 (向后兼容)
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @returns 应用错误对象
    */
   handleScrapingError(message: string, details?: any): AppError {
     return this.handleParsingError(message, details);
@@ -214,6 +175,10 @@ export class FrontendErrorHandler {
 
   /**
    * 文件系统错误处理
+   * @param operation - 操作类型
+   * @param path - 文件路径
+   * @param error - 错误对象
+   * @returns 应用错误对象
    */
   handleFileSystemError(operation: string, path: string, error: any): AppError {
     let errorType = ErrorType.SYSTEM_ERROR;
@@ -243,6 +208,9 @@ export class FrontendErrorHandler {
 
   /**
    * 调度错误处理
+   * @param expression - Cron表达式
+   * @param error - 错误对象
+   * @returns 应用错误对象
    */
   handleSchedulingError(expression: string, error: any): AppError {
     const appError = this.createError(
@@ -257,6 +225,9 @@ export class FrontendErrorHandler {
 
   /**
    * Cron错误处理 (向后兼容)
+   * @param expression - Cron表达式
+   * @param error - 错误对象
+   * @returns 应用错误对象
    */
   handleCronError(expression: string, error: any): AppError {
     return this.handleSchedulingError(expression, error);
@@ -264,6 +235,7 @@ export class FrontendErrorHandler {
 
   /**
    * 添加错误监听器
+   * @param listener - 错误监听器函数
    */
   addErrorListener(listener: (error: AppError) => void): void {
     this.errorListeners.push(listener);
@@ -271,6 +243,7 @@ export class FrontendErrorHandler {
 
   /**
    * 移除错误监听器
+   * @param listener - 错误监听器函数
    */
   removeErrorListener(listener: (error: AppError) => void): void {
     const index = this.errorListeners.indexOf(listener);
@@ -281,6 +254,10 @@ export class FrontendErrorHandler {
 
   /**
    * 重试操作
+   * @param operation - 要重试的操作
+   * @param maxRetries - 最大重试次数
+   * @param delay - 重试延迟
+   * @returns 操作结果
    */
   async retry<T>(
     operation: () => Promise<T>,
@@ -307,6 +284,12 @@ export class FrontendErrorHandler {
     throw this.handle(lastError);
   }
 
+  /**
+   * 标准化错误对象
+   * @param error - 原始错误
+   * @param context - 错误上下文
+   * @returns 标准化的应用错误
+   */
   private normalizeError(error: any, context?: ErrorContext): AppError {
     if (this.isAppError(error)) {
       return {
@@ -335,6 +318,11 @@ export class FrontendErrorHandler {
     };
   }
 
+  /**
+   * 检查是否为应用错误对象
+   * @param error - 错误对象
+   * @returns 是否为应用错误
+   */
   private isAppError(error: any): error is AppError {
     return (
       error &&
@@ -344,6 +332,11 @@ export class FrontendErrorHandler {
     );
   }
 
+  /**
+   * 检测错误类型
+   * @param error - 错误对象
+   * @returns 错误类型
+   */
   private detectErrorType(error: any): ErrorType {
     // 网络相关错误
     if (
@@ -413,6 +406,12 @@ export class FrontendErrorHandler {
     return ErrorType.UNKNOWN_ERROR;
   }
 
+  /**
+   * 检测错误严重程度
+   * @param error - 错误对象
+   * @param type - 错误类型
+   * @returns 错误严重程度
+   */
   private detectSeverity(error: any, type: ErrorType): ErrorSeverity {
     switch (type) {
       case ErrorType.VALIDATION_ERROR:
@@ -440,6 +439,11 @@ export class FrontendErrorHandler {
     }
   }
 
+  /**
+   * 检查错误是否可恢复
+   * @param type - 错误类型
+   * @returns 是否可恢复
+   */
   private isRecoverable(type: ErrorType): boolean {
     return [
       ErrorType.NETWORK_ERROR,
@@ -451,6 +455,11 @@ export class FrontendErrorHandler {
     ].includes(type);
   }
 
+  /**
+   * 检查错误是否可重试
+   * @param type - 错误类型
+   * @returns 是否可重试
+   */
   private isRetryable(type: ErrorType): boolean {
     return [
       ErrorType.NETWORK_ERROR,
@@ -460,39 +469,63 @@ export class FrontendErrorHandler {
     ].includes(type);
   }
 
+  /**
+   * 记录错误到控制台
+   * @param error - 应用错误对象
+   */
   private logError(error: AppError): void {
-    const logMessage = `[${error.severity}] ${error.type}: ${error.message}`;
-    
+    const logData = {
+      id: error.id,
+      type: error.type,
+      severity: error.severity,
+      message: error.message,
+      timestamp: error.timestamp,
+      context: error.context,
+      stack: error.stack,
+    };
+
+    const logMessage = `[前端错误] ${error.type} - ${error.message}`;
+
     switch (error.severity) {
       case ErrorSeverity.CRITICAL:
+        console.error(`[CRITICAL] ${logMessage}`, logData);
+        break;
       case ErrorSeverity.HIGH:
-        console.error(logMessage, error.details);
+        console.error(`[HIGH] ${logMessage}`, logData);
         break;
       case ErrorSeverity.MEDIUM:
-        console.warn(logMessage, error.details);
+        console.warn(`[MEDIUM] ${logMessage}`, logData);
         break;
       case ErrorSeverity.LOW:
-        console.info(logMessage, error.details);
+        console.info(`[LOW] ${logMessage}`, logData);
         break;
     }
   }
 
+  /**
+   * 通知错误监听器
+   * @param error - 应用错误对象
+   */
   private notifyListeners(error: AppError): void {
     this.errorListeners.forEach((listener) => {
       try {
         listener(error);
       } catch (listenerError) {
-        console.error('Error in error listener:', listenerError);
+        console.error('[前端错误处理器] 监听器执行失败:', listenerError);
       }
     });
   }
 
+  /**
+   * 生成错误ID
+   * @returns 唯一错误ID
+   */
   private generateErrorId(): string {
     return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 }
 
-// 导出单例实例
+// 创建单例实例
 export const frontendErrorHandler = new FrontendErrorHandler();
 
 // 导出便捷方法
@@ -531,3 +564,6 @@ export const createFrontendSchedulingError = (expression: string, error: any) =>
 
 export const createFrontendCronError = (expression: string, error: any) =>
   frontendErrorHandler.handleCronError(expression, error);
+
+// 导出类型
+export { ErrorType, ErrorSeverity, type ErrorContext, type AppError, type ErrorHandlerConfig };

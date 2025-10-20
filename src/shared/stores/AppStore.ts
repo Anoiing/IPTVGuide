@@ -12,8 +12,8 @@ import type {
   Alert,
   UserPreferences,
   ComponentState,
-} from '../types/core.js';
-import { errorHandler } from '../core/error/LightweightErrorHandler.js';
+} from '../types/core.ts';
+import { errorHandler } from '../core/error/LightweightErrorHandler.ts';
 
 // 系统状态接口
 interface SystemState {

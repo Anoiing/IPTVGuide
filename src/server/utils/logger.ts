@@ -5,6 +5,6 @@ export {
   LogLevel,
   type LogEntry,
   type LoggerConfig
-} from '../logging/types.js';
+} from '../logging/types.ts';
 
-export { Logger } from '../logging/Logger.js';
+export { Logger } from '../logging/Logger.ts';

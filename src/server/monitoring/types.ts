@@ -2,7 +2,7 @@
  * 频道可用性监测系统类型定义
  */
 
-import type { ChannelInfo } from '../../shared/types/scraper.js';
+import type { ChannelInfo } from '../../shared/types/scraper.ts';
 
 /**
  * 频道检查配置接口

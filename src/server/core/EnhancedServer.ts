@@ -8,19 +8,19 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { ScraperEngine } from '../scraper/ScraperEngine.js';
-import { FileGenerator } from '../scraper/FileGenerator.js';
-import { CronScheduler } from '../scheduler/CronScheduler.js';
-import { Logger } from '../utils/logger.js';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.js';
-import { ConfigManager } from '../../shared/core/ConfigManager.js';
+import { ScraperEngine } from '../scraper/ScraperEngine.ts';
+import { FileGenerator } from '../scraper/FileGenerator.ts';
+import { CronScheduler } from '../scheduler/CronScheduler.ts';
+import { Logger } from '../utils/logger.ts';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
+import { ConfigManager } from '../../shared/core/ConfigManager.ts';
 import type {
   SystemConfig,
   ApiResponse,
   ValidationResult,
   SystemStats,
   LogEntry,
-} from '../../shared/types/core.js';
+} from '../../shared/types/core.ts';
 
 // 系统配置模式
 const systemConfigSchema = {

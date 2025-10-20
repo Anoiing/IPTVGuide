@@ -136,6 +136,16 @@ export interface SystemConfig {
   requestDelay: [number, number]; // [min, max] seconds
   maxRetries: number;
   
+  // 数据源配置
+  sources?: string[];
+  
+  // 过滤器配置
+  filters?: {
+    quality?: 'all' | 'SD' | 'HD' | 'FHD' | '4K';
+    language?: string;
+    country?: string;
+  };
+  
   // 输出配置
   output: {
     formats: ('m3u' | 'json' | 'txt')[];

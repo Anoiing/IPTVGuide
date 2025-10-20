@@ -2,7 +2,7 @@
  * 爬取相关类型定义
  */
 
-import type { ChannelInfo } from './channel.js';
+import type { ChannelInfo } from './channel.ts';
 
 export interface ScrapingResult {
   success: boolean;
