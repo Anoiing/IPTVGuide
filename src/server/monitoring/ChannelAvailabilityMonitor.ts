@@ -15,11 +15,11 @@ import type {
   ChannelCheck,
   NotificationConfig,
   ChannelAvailabilityMonitor
-} from './types.ts';
-import type { ChannelInfo } from '../../shared/types/scraper.ts';
-import { Logger } from '../utils/logger.ts';
-import { ConfigManager } from '../scraper/ConfigManager.ts';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
+} from './types';
+import type { ChannelInfo } from '../../shared/types/scraper';
+import { Logger } from '../utils/logger';
+import { ConfigManager } from '../../shared/core/ConfigManager';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler';
 
 export class ChannelAvailabilityMonitorImpl implements ChannelAvailabilityMonitor {
   private configManager: ConfigManager;
@@ -29,7 +29,7 @@ export class ChannelAvailabilityMonitorImpl implements ChannelAvailabilityMonito
   private dataDir: string;
 
   constructor(configDir: string = './config', dataDir: string = './output') {
-    this.configManager = new ConfigManager(configDir);
+    this.configManager = new ConfigManager({ configDir });
     this.logger = new Logger(configDir);
     this.dataDir = dataDir;
     
@@ -225,7 +225,7 @@ export class ChannelAvailabilityMonitorImpl implements ChannelAvailabilityMonito
       }
       
       // 获取系统配置
-      const config = this.configManager.loadConfig();
+      const config = this.configManager.getConfig();
       
       // 检查可用性阈值
       const availabilityThreshold = config.availabilityThreshold || 80; // 默认80%

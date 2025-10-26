@@ -1,6 +1,3 @@
-/**
- * 核心模块导出
- */
-
-export * from './ErrorHandler.ts';
-export * from './ConfigManager.ts';
+// 核心模块统一导出
+export * from './ErrorHandler';
+export * from './ConfigManager';

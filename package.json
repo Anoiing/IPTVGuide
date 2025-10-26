@@ -19,17 +19,13 @@
     "@types/express": "^5.0.3",
     "@types/node-cron": "^3.0.11",
     "@types/querystringify": "^2.0.2",
-    "@types/supertest": "^6.0.3",
-    "@vitest/coverage-v8": "3.2.4",
     "autoprefixer": "^10.4.20",
     "express": "^4.21.1",
     "postcss": "^8.4.47",
-    "supertest": "^7.1.4",
     "svelte": "^4.2.19",
     "svelte-check": "^4.0.4",
     "typescript": "^5.5.3",
-    "vite": "^5.4.20",
-    "vitest": "^3.2.4"
+    "vite": "^5.4.20"
   },
   "dependencies": {
     "axios": "^1.7.7",

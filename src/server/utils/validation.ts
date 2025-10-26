@@ -8,40 +8,7 @@ export function formatTimestamp(date: Date): string {
   return date.toString().replace('GMT+0800 (中国标准时间)', '');
 }
 
-/**
- * 计算数组的平均值
- * @param numbers 数字数组
- */
-export function calculateAverage(numbers: number[]): number {
-  if (numbers.length === 0) return 0;
-  return numbers.reduce((a, b) => a + b, 0) / numbers.length;
-}
 
-/**
- * 限制数组大小，保留最后的N个元素
- * @param array 要限制的数组
- * @param maxSize 最大大小
- */
-export function limitArraySize<T>(array: T[], maxSize: number): T[] {
-  return array.length > maxSize ? array.slice(-maxSize) : array;
-}
-
-/**
- * 统计对象数组中某个属性的出现次数
- * @param items 对象数组
- * @param keyExtractor 提取键的函数
- */
-export function countByKey<T>(
-  items: T[],
-  keyExtractor: (item: T) => string
-): { [key: string]: number } {
-  const stats: { [key: string]: number } = {};
-  items.forEach((item) => {
-    const key = keyExtractor(item);
-    stats[key] = (stats[key] || 0) + 1;
-  });
-  return stats;
-}
 
 /**
  * 验证IP地址格式

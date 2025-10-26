@@ -20,8 +20,8 @@ export {
   createFileSystemError,
   createSchedulingError,
   createCronError
-} from './error/ErrorHandler.ts';
+} from './error/ErrorHandler';
 
 // 从类型模块导出枚举
-export { ErrorType, ErrorSeverity } from './error/types.ts';
+export { ErrorType, ErrorSeverity } from './error/types';
 

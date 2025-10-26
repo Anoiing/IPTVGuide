@@ -1,8 +1,8 @@
 // Cron配置管理模块
 import cron from 'node-cron';
-import { ConfigManager } from '../scraper/ConfigManager.ts';
-import { Logger } from '../utils/logger.ts';
-import type { SystemConfig } from '../../shared/types/scraper.ts';
+import { EnhancedConfigManager } from '../../shared/core/config/EnhancedConfigManager';
+import { Logger } from '../utils/logger';
+import type { UnifiedSystemConfig } from '../../shared/core/config/schemas';
 
 export interface CronConfig {
   expression: string;
@@ -19,7 +19,7 @@ export interface CronValidationResult {
 }
 
 export class CronConfigManager {
-  private configManager: ConfigManager;
+  private configManager: EnhancedConfigManager;
   private logger: Logger;
   private timezone: string;
 
@@ -27,7 +27,7 @@ export class CronConfigManager {
     configDir: string = './config',
     timezone: string = 'Asia/Shanghai'
   ) {
-    this.configManager = new ConfigManager(configDir);
+    this.configManager = new EnhancedConfigManager({ configDir });
     this.logger = new Logger(configDir);
     this.timezone = timezone;
   }
@@ -38,7 +38,7 @@ export class CronConfigManager {
    */
   getCronConfig(): CronConfig | null {
     try {
-      const config = this.configManager.loadConfig();
+      const config = this.configManager.getConfig();
 
       if (!config.cron) {
         return null;
@@ -73,7 +73,8 @@ export class CronConfigManager {
       }
 
       // 更新配置
-      this.configManager.saveConfig({ cron: cronExpression });
+      this.configManager.set('cron', cronExpression);
+      this.configManager.saveConfig();
 
       this.logger.info(`Cron expression updated to: ${cronExpression}`);
       return true;
@@ -89,7 +90,8 @@ export class CronConfigManager {
    */
   disableCron(): boolean {
     try {
-      this.configManager.saveConfig({ cron: '' });
+      this.configManager.set('cron', '');
+      this.configManager.saveConfig();
       this.logger.info('Cron disabled');
       return true;
     } catch (error) {
@@ -115,7 +117,8 @@ export class CronConfigManager {
         );
       }
 
-      this.configManager.saveConfig({ cron: expression });
+      this.configManager.set('cron', expression);
+      this.configManager.saveConfig();
       this.logger.info(`Cron enabled with expression: ${expression}`);
       return true;
     } catch (error) {
@@ -270,8 +273,9 @@ export class CronConfigManager {
    */
   resetToDefault(): boolean {
     try {
-      const defaultCron = '0 */6 * * *'; // 每6小时执行一次
-      this.configManager.saveConfig({ cron: defaultCron });
+      const defaultCron = '0 */6 * * *'; // 重置为默认配置
+      this.configManager.set('cron', defaultCron);
+      this.configManager.saveConfig();
       this.logger.info(`Cron configuration reset to default: ${defaultCron}`);
       return true;
     } catch (error) {

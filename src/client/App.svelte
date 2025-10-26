@@ -6,7 +6,6 @@
     appStore,
   } from '../shared/stores/AppStore.js';
   import { SystemAPI, TaskAPI } from './services/ApiService.js';
-  import { frontendErrorHandler } from './services/FrontendErrorHandler.js';
   import NotificationToast from './components/NotificationToast.svelte';
 
   let isLoading = true;
@@ -47,7 +46,7 @@
   // 响应式状态
   $: currentStatus = $systemStatus;
   $: currentConfig = $systemConfig;
-  $: statusInfo = statusConfig[currentStatus] || statusConfig.NOT_CONFIGURED;
+  $: statusInfo = statusConfig[currentStatus as keyof typeof statusConfig] || statusConfig.NOT_CONFIGURED;
   $: isTaskRunning = currentStatus === 'RUNNING';
   $: runButtonText = isTaskRunning ? '停止运行' : '立即运行';
   $: runButtonColor = isTaskRunning
@@ -64,12 +63,8 @@
       setupPolling();
       isLoading = false;
     } catch (error) {
-      // 使用前端错误处理器处理初始化错误
-      frontendErrorHandler.handle(error, {
-        context: 'App.onMount',
-        severity: 'HIGH',
-        userMessage: '应用初始化失败，请刷新页面重试'
-      });
+      // 处理初始化错误
+      console.error('应用初始化失败:', error);
       appStore.handleError(error, 'app-initialization');
       isLoading = false;
     }

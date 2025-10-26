@@ -7,7 +7,7 @@ import type {
   ErrorContext, 
   AppError, 
   ErrorHandlerConfig 
-} from './types.ts';
+} from './types';
 
 // 定义错误类型枚举（前端兼容版本）
 export enum ErrorType {
@@ -208,7 +208,7 @@ export class LightweightErrorHandler {
     return ErrorType.UNKNOWN_ERROR;
   }
 
-  private detectSeverity(error: any, type: ErrorType): ErrorSeverity {
+  private detectSeverity(_error: any, type: ErrorType): ErrorSeverity {
     switch (type) {
       case ErrorType.VALIDATION_ERROR:
         return ErrorSeverity.LOW;

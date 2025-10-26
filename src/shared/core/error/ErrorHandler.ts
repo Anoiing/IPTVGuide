@@ -3,8 +3,8 @@
  * 提供全局错误处理、错误分类和错误恢复机制
  */
 
-import { ErrorType, ErrorSeverity } from './types.ts';
-import { Logger } from '../../../server/utils/logger.ts';
+import { ErrorType, ErrorSeverity } from './types';
+import { Logger } from '../../../server/utils/logger';
 
 export interface ErrorContext {
   method?: string;
@@ -204,11 +204,15 @@ export class ErrorHandler {
   }
 
   /**
-   * 文件系统错误处理
+   * 处理文件系统错误
+   * @param operation - 操作类型
+   * @param path - 文件路径
+   * @param error - 原始错误
+   * @returns 处理后的应用错误
    */
   handleFileSystemError(operation: string, path: string, error: any): AppError {
-    let errorType = ErrorType.SYSTEM_ERROR;
-    let severity = ErrorSeverity.HIGH;
+    let errorType: ErrorType;
+    let severity: ErrorSeverity;
 
     // 根据错误代码确定具体的错误类型
     if (error.code === 'ENOENT') {
@@ -220,6 +224,9 @@ export class ErrorHandler {
     } else if (error.code === 'ENOSPC') {
       errorType = ErrorType.DISK_SPACE_ERROR;
       severity = ErrorSeverity.CRITICAL;
+    } else {
+      errorType = ErrorType.SYSTEM_ERROR;
+      severity = ErrorSeverity.HIGH;
     }
 
     const appError = this.createError(
@@ -430,7 +437,7 @@ export class ErrorHandler {
     return ErrorType.UNKNOWN_ERROR;
   }
 
-  private detectSeverity(error: any, type: ErrorType): ErrorSeverity {
+  private detectSeverity(_error: any, type: ErrorType): ErrorSeverity {
     switch (type) {
       case ErrorType.VALIDATION_ERROR:
         return ErrorSeverity.LOW;
@@ -465,16 +472,29 @@ export class ErrorHandler {
       ErrorType.PARSING_ERROR,
       ErrorType.VALIDATION_ERROR,
       ErrorType.SCHEDULING_ERROR,
+      ErrorType.FILE_NOT_FOUND,
+      ErrorType.FILE_PERMISSION_ERROR,
+      ErrorType.DISK_SPACE_ERROR,
+      ErrorType.CONFIGURATION_ERROR,
+      ErrorType.MEMORY_ERROR,
+      ErrorType.SYSTEM_ERROR,
+      ErrorType.UNKNOWN_ERROR,
     ].includes(type);
   }
 
+  /**
+   * 判断错误类型是否可重试
+   * @param type 错误类型
+   * @returns 是否可重试
+   */
   private isRetryable(type: ErrorType): boolean {
-    return [
-      ErrorType.NETWORK_ERROR,
+    const retryableTypes: ErrorType[] = [
       ErrorType.HTTP_ERROR,
+      ErrorType.NETWORK_ERROR,
       ErrorType.TIMEOUT_ERROR,
       ErrorType.PARSING_ERROR,
-    ].includes(type);
+    ];
+    return retryableTypes.includes(type);
   }
 
   private recordError(error: AppError): void {

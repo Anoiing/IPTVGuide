@@ -1,17 +1,17 @@
 // HTML解析模块
 import * as cheerio from 'cheerio';
-import type { HtmlParser as IHtmlParser } from '../../shared/types/interfaces.ts';
+import type { HtmlParser as IHtmlParser } from '../../shared/types/interfaces';
 import type {
   ChannelInfo,
-  PaginationInfo,
-} from '../../shared/types/scraper.ts';
-import { Logger } from '../utils/logger.ts';
+} from '../../shared/types/scraper';
+import type { PaginationInfo } from '../../shared/types/api';
+import { Logger } from '../utils/logger';
 import {
   isValidIP,
   isValidIPWithPort,
   isValidHttpURL,
   sanitizeChannelName,
-} from '../utils/validation.ts';
+} from '../utils/validation';
 
 export class HtmlParser implements IHtmlParser {
   private logger: Logger;

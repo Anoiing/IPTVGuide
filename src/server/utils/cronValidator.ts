@@ -145,22 +145,3 @@ function estimateDailyExecutions(cronExpression: string): number {
   // 默认情况，假设每天一次
   return 1;
 }
-
-/**
- * 获取推荐的cron表达式示例
- */
-export function getRecommendedCronExamples(): Array<{
-  expression: string;
-  description: string;
-}> {
-  return [
-    { expression: '0 */6 * * *', description: '每6小时执行一次' },
-    { expression: '0 */8 * * *', description: '每8小时执行一次' },
-    { expression: '0 */12 * * *', description: '每12小时执行一次' },
-    { expression: '0 2 * * *', description: '每天凌晨2点执行' },
-    { expression: '0 9 * * *', description: '每天上午9点执行' },
-    { expression: '0 2,14 * * *', description: '每天凌晨2点和下午2点执行（12小时间隔）' },
-    { expression: '0 6,18 * * *', description: '每天早上6点和晚上6点执行（12小时间隔）' },
-    { expression: '0 0,8,16 * * *', description: '每天0点、8点、16点执行（8小时间隔）' },
-  ];
-}

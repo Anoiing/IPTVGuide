@@ -7,13 +7,11 @@ import { writable, derived, type Writable, type Readable } from 'svelte/store';
 import type {
   SystemConfig,
   SystemStatus,
-  SystemStats,
   TaskInfo,
   Alert,
   UserPreferences,
-  ComponentState,
-} from '../types/core.ts';
-import { errorHandler } from '../core/error/LightweightErrorHandler.ts';
+} from '../types/core';
+import { errorHandler } from '../core/error/LightweightErrorHandler';
 
 // 系统状态接口
 interface SystemState {
@@ -63,18 +61,24 @@ const defaultSystemConfig: SystemConfig = {
     invalid: true,
     minChannels: 10,
   },
-  // 保持向后兼容的字段
+  // 向后兼容字段
   area: '浙江',
   preferredAddress: '',
   channels: 0,
   blackList: [],
   dedup: true,
-  requestDelay: [1, 3],
-  maxRetries: 3,
-  enableLogging: true,
-  logLevel: 'INFO',
   outputFormats: ['m3u', 'json', 'txt'],
-  timeout: 30000,
+  // 网络配置
+  network: {
+    requestDelay: [1, 3],
+    maxRetries: 3,
+    timeout: 30000,
+  },
+  // 日志配置
+  logging: {
+    enableLogging: true,
+    logLevel: 'INFO',
+  },
 };
 
 const defaultUserPreferences: UserPreferences = {
@@ -399,10 +403,10 @@ export const pollInterval: Readable<number> = derived(
 let configValue: SystemConfig = defaultSystemConfig;
 let statusValue: SystemStatus = 'NOT_CONFIGURED';
 
-const configUnsubscribe = systemConfig.subscribe((value) => {
+systemConfig.subscribe((value) => {
   configValue = value;
 });
-const statusUnsubscribe = systemStatus.subscribe((value) => {
+systemStatus.subscribe((value) => {
   statusValue = value;
 });
 

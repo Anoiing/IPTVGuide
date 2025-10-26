@@ -1,20 +1,21 @@
 // 集成的爬取系统 - 简化版本
-import { ScraperEngine } from '../scraper/ScraperEngine.ts';
-import { ScrapingLogger } from './ScrapingLogger.ts';
-import { progressMonitor } from './ProgressMonitor.ts';
-import { monitoringService } from './MonitoringService.ts';
-import type { ScrapingResult } from '../../shared/types/scraper.ts';
+import { ScraperEngine } from '../scraper/ScraperEngine';
+import { Logger } from '../logging/Logger';
+import { progressMonitor } from './ProgressMonitor';
+import { monitoringService } from './MonitoringService';
+import { errorHandler } from '../../shared/core/ErrorHandler';
+import type { ScrapingResult } from '../../shared/types/scraper';
 
 export class IntegratedScrapingSystem {
   private scraperEngine: ScraperEngine;
-  private logger: ScrapingLogger;
+  private logger: Logger;
   private configDir: string;
 
   constructor(configDir: string = './config') {
     this.configDir = configDir;
 
     // 初始化日志系统
-    this.logger = new ScrapingLogger(configDir);
+    this.logger = new Logger(configDir);
 
     // 初始化爬取引擎
     this.scraperEngine = new ScraperEngine(configDir);
@@ -55,11 +56,14 @@ export class IntegratedScrapingSystem {
 
       return {
         success: false,
-        channelsByIP: {},
         totalChannels: 0,
         processedIPs: [],
-        errors: [(error as Error).message],
         timestamp: new Date(),
+        errors: [{
+          type: 'SYSTEM',
+          message: (error as Error).message,
+          timestamp: new Date()
+        }]
       };
     } finally {
       // 停止监控服务
@@ -108,9 +112,10 @@ export class IntegratedScrapingSystem {
       const duration = Date.now() - startTime;
 
       // 记录完成后的性能指标
+      const processedCount = Array.isArray(result.processedIPs) ? result.processedIPs.length : result.processedIPs;
       progressMonitor.recordMetrics(taskId, {
-        requestsPerSecond: result.processedIPs.length / (duration / 1000),
-        averageResponseTime: duration / Math.max(result.processedIPs.length, 1),
+        requestsPerSecond: processedCount / (duration / 1000),
+        averageResponseTime: duration / Math.max(processedCount, 1),
         successRate: result.success ? 100 : 0,
         uptime: process.uptime(),
       });
@@ -147,7 +152,9 @@ export async function createAndRunIntegratedSystem(
 
     return result;
   } catch (error) {
-    console.error('爬取系统执行失败:', error);
+    errorHandler.handle(error, {
+      context: 'IntegratedScrapingSystem.executeScrapingWithMonitoring'
+    });
     throw error;
   }
 }

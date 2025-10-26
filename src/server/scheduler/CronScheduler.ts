@@ -1,12 +1,13 @@
 // Cron调度器模块
 import cron from 'node-cron';
 import type { ScheduledTask } from 'node-cron';
-import { Logger } from '../utils/logger.ts';
-import { ScraperEngine } from '../scraper/ScraperEngine.ts';
-import { ConfigManager } from '../scraper/ConfigManager.ts';
-import { FileGenerator } from '../scraper/FileGenerator.ts';
-import { CronConfigManager } from './CronConfigManager.ts';
-import type { ScrapingResult } from '../../shared/types/scraper.ts';
+import { Logger } from '../utils/logger';
+import { ScraperEngine } from '../scraper/ScraperEngine';
+import { EnhancedConfigManager } from '../../shared/core/config/EnhancedConfigManager';
+import { FileGenerator } from '../scraper/FileGenerator';
+import { CronConfigManager } from './CronConfigManager';
+import type { ScrapingResult } from '../../shared/types/scraper';
+import type { SystemConfig } from '../../shared/core/types';
 
 export interface CronSchedulerOptions {
   configDir?: string;
@@ -25,7 +26,7 @@ export interface SchedulerStatus {
 export class CronScheduler {
   private logger: Logger;
   private scraperEngine: ScraperEngine;
-  private configManager: ConfigManager;
+  private configManager: EnhancedConfigManager;
   private cronConfigManager: CronConfigManager;
   private fileGenerator: FileGenerator;
   private scheduledTask: ScheduledTask | null = null;
@@ -42,7 +43,15 @@ export class CronScheduler {
     this.timezone = timezone;
     this.logger = new Logger(configDir);
     this.scraperEngine = new ScraperEngine(configDir);
-    this.configManager = new ConfigManager(configDir);
+    
+    // 使用统一的EnhancedConfigManager
+    this.configManager = new EnhancedConfigManager({
+      configDir,
+      configFile: 'config.json',
+      backupEnabled: true,
+      autoSave: true,
+    });
+    
     this.cronConfigManager = new CronConfigManager(configDir, timezone);
     this.fileGenerator = new FileGenerator(outputDir);
   }
@@ -112,17 +121,15 @@ export class CronScheduler {
 
   /**
    * 获取调度器状态
-   * @returns 调度器状态信息
    */
   getStatus(): SchedulerStatus {
-    const isRunning = this.scheduledTask !== null;
     let cronExpression: string | null = null;
     let nextExecution: Date | null = null;
 
     if (this.scheduledTask) {
       try {
         // 从配置中获取cron表达式
-        const config = this.configManager.loadConfig();
+        const config = this.configManager.getConfig();
         cronExpression = config.cron || null;
 
         // 获取下次执行时间（这是一个近似值，因为node-cron没有直接提供这个API）
@@ -131,16 +138,16 @@ export class CronScheduler {
           nextExecution = null;
         }
       } catch (error) {
-        this.logger.error('Failed to get scheduler status', error);
+        this.logger.error('Failed to get cron expression from config', error);
       }
     }
 
     return {
-      isRunning,
+      isRunning: this.scheduledTask !== null,
       cronExpression,
       nextExecution,
       lastExecution: this.lastExecution,
-      taskCount: isRunning ? 1 : 0,
+      taskCount: this.scheduledTask ? 1 : 0,
     };
   }
 
@@ -169,32 +176,30 @@ export class CronScheduler {
   private async executeScrapingTask(): Promise<ScrapingResult> {
     try {
       this.lastExecution = new Date();
-      this.logger.info('Starting scraping task');
+      this.logger.info('开始执行定时爬取任务');
 
-      const result: ScrapingResult = await this.scraperEngine.startScraping();
+      const result = await this.scraperEngine.startScraping();
 
       if (result.success && result.totalChannels > 0) {
         // 生成输出文件
-        this.fileGenerator.generateJSON(result.channelsByIP);
-        this.fileGenerator.generateTXT(result.channelsByIP);
-        this.fileGenerator.generateM3U(result.channelsByIP);
+        if (result.channelsByIP) {
+          this.fileGenerator.generateAll(result.channelsByIP);
 
-        // 更新首选地址（选择频道数最多的IP）
-        const bestIP = Object.entries(result.channelsByIP).sort(
-          ([, a], [, b]) => b.length - a.length
-        )[0];
+          // 更新首选地址（选择频道数最多的IP）
+          const bestIP = Object.entries(result.channelsByIP).sort(
+            ([, a], [, b]) => b.length - a.length
+          )[0];
 
-        if (bestIP) {
-          this.configManager.updatePreferredAddress(
-            bestIP[0],
-            bestIP[1].length
-          );
+          if (bestIP) {
+            // 使用统一ConfigManager的set方法更新首选地址
+            this.configManager.set('preferredAddress', bestIP[0]);
+          }
         }
 
         this.logger.info(
           `Scraping completed successfully: ${
             result.totalChannels
-          } channels from ${Object.keys(result.channelsByIP).length} IPs`
+          } channels from ${result.channelsByIP ? Object.keys(result.channelsByIP).length : 0} IPs`
         );
       } else {
         this.logger.error(
@@ -205,18 +210,17 @@ export class CronScheduler {
 
       return result;
     } catch (error) {
-      this.logger.error('Scraping task failed', error);
+      this.logger.error('定时任务执行失败', error);
       throw error;
     }
   }
 
   /**
-   * 从配置文件初始化定时任务
-   * @returns 是否初始化成功
+   * 从配置初始化调度器
    */
   initializeFromConfig(): boolean {
     try {
-      const config = this.configManager.loadConfig();
+      const config = this.configManager.getConfig();
       if (config.cron) {
         return this.start(config.cron);
       }

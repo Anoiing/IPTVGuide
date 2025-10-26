@@ -1,8 +1,7 @@
 /**
  * 监控相关类型定义
  */
-
-import type { ChannelInfo, ChannelValidationResult } from './channel.ts';
+import type { ChannelValidationResult } from './channel';
 
 export interface ChannelCheckConfig {
   name: string;

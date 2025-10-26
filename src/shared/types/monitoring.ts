@@ -1,8 +1,9 @@
 /**
- * 频道可用性监测系统类型定义
+ * 监控相关类型定义
+ * 统一管理所有监控类型，避免重复定义
  */
 
-import type { ChannelInfo } from '../../shared/types/scraper';
+import type { ChannelInfo } from './channel';
 
 /**
  * 频道检查配置接口
@@ -11,11 +12,11 @@ export interface ChannelCheckConfig {
   name: string;
   cronExpression: string;
   checkType: 'SAMPLE_CHECK' | 'FULL_CHECK' | 'PRIORITY_CHECK';
-  sampleSize?: number; // 抽样检查的频道数量
-  timeout?: number; // 单个频道检查超时时间
+  sampleSize?: number;
+  timeout?: number;
   retryCount?: number;
   checkMethod: 'HEAD_REQUEST' | 'STREAM_TEST' | 'CONTENT_DOWNLOAD';
-  priorityChannels?: string[]; // 优先检查的频道名称
+  priorityChannels?: string[];
   notificationConfig?: NotificationConfig;
 }
 
@@ -24,8 +25,8 @@ export interface ChannelCheckConfig {
  */
 export interface NotificationConfig {
   enabled: boolean;
-  onLowAvailability?: boolean; // 可用性低于阈值时通知
-  onChannelFailure?: boolean; // 重要频道失效时通知
+  onLowAvailability?: boolean;
+  onChannelFailure?: boolean;
   webhookUrl?: string;
   emailConfig?: {
     smtp: string;
@@ -86,35 +87,6 @@ export interface ChannelValidationResult {
 }
 
 /**
- * 爬取决策接口
- */
-export interface ScrapingDecision {
-  shouldScrape: boolean;
-  reason:
-    | 'AVAILABILITY_LOW'
-    | 'NO_RECENT_DATA'
-    | 'MANUAL_TRIGGER'
-    | 'AVAILABILITY_OK';
-  availabilityRate?: number;
-  lastCheckTime?: Date;
-}
-
-/**
- * 频道可用性监控接口
- */
-export interface ChannelAvailabilityMonitor {
-  scheduleCheck(config: ChannelCheckConfig): string;
-  cancelCheck(checkId: string): boolean;
-  getCheckStatus(checkId: string): CheckStatus;
-  getAllChecks(): ChannelCheck[];
-  validateChannelUrls(
-    channels: ChannelInfo[]
-  ): Promise<ChannelValidationResult[]>;
-  checkSingleChannel(channel: ChannelInfo): Promise<ChannelValidationResult>;
-  checkAvailabilityAndScrapeIfNeeded(): Promise<ScrapingDecision>;
-}
-
-/**
  * 频道检查接口
  */
 export interface ChannelCheck {
@@ -123,6 +95,25 @@ export interface ChannelCheck {
   status: CheckStatus;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * 系统统计接口
+ */
+export interface SystemStats {
+  uptime: number;
+  channels: {
+    total: number;
+    available: number;
+  };
+  lastUpdate: Date;
+  scrapingStats?: {
+    totalRuns: number;
+    successfulRuns: number;
+    failedRuns: number;
+    averageDuration: number;
+    lastRunTime?: Date;
+  };
 }
 
 /**
@@ -147,14 +138,11 @@ export interface SystemData {
     workingChannels: number;
     failedChannels: number;
     checkDuration: number;
-    byGroup: Record<
-      string,
-      {
-        total: number;
-        available: number;
-        rate: number;
-      }
-    >;
+    byGroup: Record<string, {
+      total: number;
+      available: number;
+      rate: number;
+    }>;
     topFailureReasons: {
       reason: string;
       count: number;
@@ -165,4 +153,76 @@ export interface SystemData {
       totalChecked: number;
     }[];
   };
+}
+
+/**
+ * 任务进度接口
+ */
+export interface TaskProgress {
+  taskId: string;
+  name: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  progress: number;
+  startTime?: Date;
+  endTime?: Date;
+  currentStep?: string;
+  totalSteps?: number;
+  completedSteps?: number;
+  estimatedTimeRemaining?: number;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * 性能指标接口
+ */
+export interface PerformanceMetrics {
+  cpuUsage: number;
+  memoryUsage: number;
+  diskUsage: number;
+  networkIO: {
+    bytesIn: number;
+    bytesOut: number;
+  };
+  responseTime: number;
+  throughput: number;
+  errorRate: number;
+}
+
+/**
+ * 错误报告接口
+ */
+export interface ErrorReport {
+  id: string;
+  timestamp: Date;
+  type: string;
+  message: string;
+  stack?: string;
+  context?: Record<string, any>;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+/**
+ * 系统警报接口
+ */
+export interface SystemAlert {
+  id: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'CRITICAL';
+  title: string;
+  message: string;
+  timestamp: Date;
+  acknowledged: boolean;
+  source: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * 监控数据接口
+ */
+export interface MonitoringData {
+  timestamp: Date;
+  systemStats: SystemStats;
+  activeTasks: TaskProgress[];
+  recentLogs: any[];
+  alerts: SystemAlert[];
+  performanceMetrics?: PerformanceMetrics;
 }

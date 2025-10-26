@@ -38,26 +38,11 @@ export interface PaginationInfo {
   itemsPerPage: number;
 }
 
-// 爬取结果接口
-export interface ScrapingResult {
-  success: boolean;
-  channelsByIP: Record<string, ChannelInfo[]>;
-  totalChannels: number;
-  processedIPs: string[];
-  errors: string[];
-  warnings?: string[];
-  skipReason?: string;
-  duration?: number;
-  timestamp: Date;
-  metadata?: {
-    sourceCount: number;
-    uniqueChannels: number;
-    duplicateChannels: number;
-  };
-}
+// 爬取结果接口 - 重新导出统一类型
+export type { ScrapingResult } from '../../types/scraper';
 
 // 爬取状态枚举
-export type ScrapingStatus = 'IDLE' | 'RUNNING' | 'STOPPING' | 'ERROR';
+export { ScrapingStatus } from '../../types/scraper';
 
 // 任务错误接口
 export interface TaskError {
@@ -71,7 +56,7 @@ export interface TaskError {
 // 爬取任务接口
 export interface ScrapingTask {
   id: string;
-  status: ScrapingStatus;
+  status: import('../../types/scraper').ScrapingStatus;
   startTime: Date;
   endTime?: Date;
   progress: {

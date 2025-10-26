@@ -5,10 +5,11 @@
 
 import fs from 'fs';
 import path from 'path';
-import { LogLevel } from './types.ts';
-import type { LogEntry, LoggerConfig, LogFilter, LogStats } from './types.ts';
-import { formatTimestamp } from '../utils/validation.ts';
-import type { ErrorType } from '../../shared/core/error/types.ts';
+import { LogLevel } from './types';
+import type { LogEntry, LoggerConfig, LogFilter, LogStats, ScrapingLogEntry, ScrapingMetrics } from './types';
+import { formatTimestamp } from '../utils/validation';
+import type { ErrorType } from '../../shared/core/error/types';
+import type { TaskError } from '../../shared/types/scraper';
 import zlib from 'zlib';
 
 export class Logger {
@@ -17,6 +18,26 @@ export class Logger {
   private logBuffer: LogEntry[] = [];
   private logFilePath: string;
   private compressedLogDir: string;
+  
+  // 爬取相关的属性
+  private scrapingMetrics: ScrapingMetrics = {
+    totalIPs: 0,
+    processedIPs: 0,
+    successfulIPs: 0,
+    failedIPs: 0,
+    totalChannels: 0,
+    validChannels: 0,
+    duplicateChannels: 0,
+    startTime: new Date(),
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    averageRequestTime: 0,
+    requestsPerSecond: 0,
+    errors: []
+  };
+  private requestTimes: number[] = [];
+  private runLog: string[] = []; // 兼容旧系统的runLog
 
   constructor(configDir: string = './config', config?: Partial<LoggerConfig>) {
     this.configDir = configDir;
@@ -357,8 +378,13 @@ export class Logger {
     }
   }
 
+  /**
+   * 将日志条目写入控制台
+   * @param entry 日志条目
+   */
   private writeToConsole(entry: LogEntry): void {
-    const levelName = LogLevel[entry.level];
+    const levelNames = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+    const levelName = levelNames[entry.level];
     const timestamp = formatTimestamp(entry.timestamp);
 
     let logLine = `${timestamp} [${levelName}]`;
@@ -416,8 +442,14 @@ export class Logger {
     }
   }
 
+  /**
+   * 格式化日志条目为字符串
+   * @param entry 日志条目
+   * @returns 格式化后的日志字符串
+   */
   private formatLogEntry(entry: LogEntry): string {
-    const levelName = LogLevel[entry.level];
+    const levelNames = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+    const levelName = levelNames[entry.level];
     const timestamp = formatTimestamp(entry.timestamp);
 
     let logLine = `${timestamp} [${levelName}]`;
@@ -532,5 +564,249 @@ export class Logger {
 
   private generateLogId(): string {
     return `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * 开始新的爬取任务
+   */
+  startScrapingTask(taskId: string): void {
+    this.resetScrapingMetrics();
+    this.runLog = [];
+
+    this.logStructured({
+      level: LogLevel.INFO,
+      message: '开始执行爬取任务',
+      category: 'SCRAPING',
+      taskId,
+      phase: 'INIT',
+    });
+
+    this.pushLog('-------------------');
+    this.pushLog('开始执行任务');
+  }
+
+  /**
+   * 记录爬取阶段
+   */
+  logPhase(
+    phase: ScrapingLogEntry['phase'],
+    message: string,
+    taskId?: string,
+    context?: any
+  ): void {
+    this.logStructured({
+      level: LogLevel.INFO,
+      message,
+      category: 'SCRAPING',
+      taskId,
+      phase,
+      context,
+    });
+
+    this.pushLog(message);
+  }
+
+  /**
+   * 记录IP处理进度
+   */
+  logIPProgress(
+    ipAddress: string,
+    channelCount: number,
+    current: number,
+    total: number,
+    taskId?: string
+  ): void {
+    const percentage = Math.round((current / total) * 100);
+
+    this.logStructured({
+      level: LogLevel.INFO,
+      message: `处理IP ${ipAddress}: 找到 ${channelCount} 个频道 (${current}/${total}, ${percentage}%)`,
+      category: 'SCRAPING',
+      taskId,
+      phase: 'CHANNEL_SCRAPING',
+      ipAddress,
+      channelCount,
+      progress: { current, total, percentage },
+    });
+
+    this.pushLog(`处理IP ${ipAddress}: 找到 ${channelCount} 个频道`);
+  }
+
+  /**
+   * 记录请求性能
+   */
+  logRequest(
+    url: string,
+    duration: number,
+    success: boolean,
+    taskId?: string
+  ): void {
+    this.requestTimes.push(duration);
+    this.scrapingMetrics.totalRequests++;
+
+    if (success) {
+      this.scrapingMetrics.successfulRequests++;
+    } else {
+      this.scrapingMetrics.failedRequests++;
+    }
+
+    this.debug(
+      `HTTP请求 ${success ? '成功' : '失败'}: ${url} (${duration}ms)`,
+      { url, duration, success },
+      'HTTP',
+      taskId
+    );
+  }
+
+  /**
+   * 记录爬取错误
+   */
+  logScrapingError(error: TaskError, taskId?: string): void {
+    this.scrapingMetrics.errors.push(error);
+
+    this.logStructured({
+      level: LogLevel.ERROR,
+      message: error.message,
+      category: 'SCRAPING',
+      taskId,
+      context: error.context,
+    });
+
+    this.pushLog(`错误: ${error.message}`);
+  }
+
+  /**
+   * 完成爬取任务
+   */
+  completeScrapingTask(
+    taskId: string,
+    totalChannels: number,
+    validChannels: number,
+    duplicateChannels: number
+  ): void {
+    this.scrapingMetrics.endTime = new Date();
+    this.scrapingMetrics.duration = 
+      this.scrapingMetrics.endTime.getTime() - this.scrapingMetrics.startTime.getTime();
+    this.scrapingMetrics.totalChannels = totalChannels;
+    this.scrapingMetrics.validChannels = validChannels;
+    this.scrapingMetrics.duplicateChannels = duplicateChannels;
+
+    // 计算平均请求时间
+    if (this.requestTimes.length > 0) {
+      this.scrapingMetrics.averageRequestTime = 
+        this.requestTimes.reduce((sum, time) => sum + time, 0) / this.requestTimes.length;
+    }
+
+    // 计算每秒请求数
+    if (this.scrapingMetrics.duration > 0) {
+      this.scrapingMetrics.requestsPerSecond = 
+        (this.scrapingMetrics.totalRequests / this.scrapingMetrics.duration) * 1000;
+    }
+
+    this.logStructured({
+      level: LogLevel.INFO,
+      message: `爬取任务完成: 总频道 ${totalChannels}, 有效频道 ${validChannels}, 重复频道 ${duplicateChannels}`,
+      category: 'SCRAPING',
+      taskId,
+      phase: 'COMPLETION',
+      context: this.getScrapingMetricsSummary(),
+    });
+
+    this.pushLog('任务执行完成');
+    this.pushLog('-------------------');
+  }
+
+  /**
+   * 兼容旧系统的pushLog函数
+   */
+  pushLog(message: string): void {
+    // 使用共享的过滤函数
+    if (this.shouldFilterLogMessage(message)) {
+      return;
+    }
+
+    const timestamp = formatTimestamp(new Date());
+    const logEntry = `${timestamp}  ${message}`;
+
+    this.runLog.push(logEntry);
+    // 使用父类的info方法，避免重复实现
+    this.info(message);
+  }
+
+  /**
+   * 获取运行日志（兼容旧API）
+   */
+  getRunLog(): string[] {
+    return [...this.runLog];
+  }
+
+  /**
+   * 获取爬取指标
+   */
+  getScrapingMetrics(): ScrapingMetrics {
+    return { ...this.scrapingMetrics };
+  }
+
+  /**
+   * 获取爬取指标摘要
+   */
+  getScrapingMetricsSummary(): any {
+    return {
+      duration: this.scrapingMetrics.duration,
+      totalRequests: this.scrapingMetrics.totalRequests,
+      successRate:
+        this.scrapingMetrics.totalRequests > 0
+          ? (
+              (this.scrapingMetrics.successfulRequests / this.scrapingMetrics.totalRequests) *
+              100
+            ).toFixed(2) + '%'
+          : '0%',
+      averageRequestTime: Math.round(this.scrapingMetrics.averageRequestTime),
+      requestsPerSecond: this.scrapingMetrics.requestsPerSecond.toFixed(2),
+      totalChannels: this.scrapingMetrics.totalChannels,
+      processedIPs: this.scrapingMetrics.processedIPs,
+      errorCount: this.scrapingMetrics.errors.length,
+    };
+  }
+
+  /**
+   * 重置爬取指标
+   */
+  private resetScrapingMetrics(): void {
+    this.scrapingMetrics = {
+      totalIPs: 0,
+      processedIPs: 0,
+      successfulIPs: 0,
+      failedIPs: 0,
+      totalChannels: 0,
+      validChannels: 0,
+      duplicateChannels: 0,
+      startTime: new Date(),
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      averageRequestTime: 0,
+      requestsPerSecond: 0,
+      errors: []
+    };
+    this.requestTimes = [];
+  }
+
+  /**
+   * 检查是否应该过滤日志消息
+   */
+  private shouldFilterLogMessage(message: string): boolean {
+    const filterPatterns = [
+      /^Processing IP:/,
+      /^Found \d+ channels/,
+      /^Validating channel:/,
+      /^Channel .* is valid/,
+      /^Channel .* is invalid/,
+      /^Duplicate channel:/,
+      /^Request to .* completed/,
+      /^Response from .* received/,
+    ];
+
+    return filterPatterns.some(pattern => pattern.test(message));
   }
 }

@@ -1,4 +1,4 @@
-import { createFrontendNetworkError } from './FrontendErrorHandler.ts';
+import { createFrontendNetworkError } from './FrontendErrorHandler';
 
 /**
  * API响应接口

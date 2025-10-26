@@ -22,24 +22,12 @@ build/
 # Local configuration and data
 config/
 output/
-test-config/
-test-output/
 logs/
 *.log
 
 # Environment files
 .env*
 !.env.example
-
-# Testing
-**/__tests__/
-**/*.test.ts
-**/*.test.js
-**/*.spec.ts
-**/*.spec.js
-coverage/
-.nyc_output/
-junit.xml
 
 # Documentation (except README)
 *.md
@@ -53,7 +41,6 @@ package-lock.json
 # Development configuration
 tsconfig*.json
 vite.config.*
-vitest.config.*
 svelte.config.js
 tailwind.config.js
 postcss.config.cjs
@@ -79,7 +66,6 @@ Thumbs.db
 # Project specific
 .kiro/
 scripts/
-docker-build-test.sh
 DOCKER_OPTIMIZATION.md
 PROJECT_COMPLETION_REPORT.md
 TASK_*.md
@@ -99,9 +85,6 @@ pids/
 *.pid
 *.seed
 *.pid.lock
-
-# Coverage directory used by tools like istanbul
-lib-cov/
 
 # Dependency directories
 jspm_packages/

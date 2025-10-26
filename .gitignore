@@ -22,10 +22,6 @@ build/
 # Runtime data
 output/
 config/
-test-output/
-test-config/
-coverage/
-.nyc_output/
 
 # Cache directories
 .cache/
@@ -36,7 +32,6 @@ coverage/
 .env
 .env.local
 .env.development.local
-.env.test.local
 .env.production.local
 
 # Package manager files

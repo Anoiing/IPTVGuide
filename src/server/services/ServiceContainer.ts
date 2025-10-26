@@ -3,14 +3,14 @@
  * 提供依赖注入和模块管理功能
  */
 
-import { Logger } from '../utils/logger.ts';
-import { EnhancedConfigManager } from '../config/index.ts';
-import { EnhancedHttpClient } from '../http/index.ts';
-import { ChannelAvailabilityMonitorImpl } from '../monitoring/index.ts';
-import { ConfigManager } from '../scraper/ConfigManager.ts';
-import { ScraperEngine } from '../scraper/ScraperEngine.ts';
-import { FileGenerator } from '../scraper/FileGenerator.ts';
-import { HtmlParser } from '../scraper/HtmlParser.ts';
+import { Logger } from '../utils/logger';
+import { EnhancedConfigManager } from '../config/index';
+import { EnhancedHttpClient } from '../http/index';
+import { ChannelAvailabilityMonitorImpl } from '../monitoring/index';
+import { ConfigManager } from '../../shared/core/ConfigManager';
+import { ScraperEngine } from '../scraper/ScraperEngine';
+import { FileGenerator } from '../scraper/FileGenerator';
+import { HtmlParser } from '../scraper/HtmlParser';
 
 export interface ServiceContainerConfig {
   configDir: string;
@@ -49,14 +49,14 @@ export class ServiceContainer {
         this.registerSingleton('configManager', () => 
           new EnhancedConfigManager({
             configDir: this.config.configDir,
-            backupDir: `${this.config.configDir}/backups`,
-            enableHotReload: true,
-            enableBackup: true,
-            backupInterval: 60
+            backupEnabled: true,
+            maxBackups: 5,
+            autoSave: true,
+            validateOnLoad: true
           })
         );
       } else {
-        this.registerSingleton('configManager', () => new ConfigManager(this.config.configDir));
+        this.registerSingleton('configManager', () => new ConfigManager({ configDir: this.config.configDir }));
       }
 
       // 注册HTTP客户端 - 统一使用EnhancedHttpClient
@@ -173,18 +173,4 @@ export class ServiceContainer {
       initialized: this.isInitialized
     };
   }
-}
-
-// 创建全局服务容器实例
-let globalContainer: ServiceContainer | null = null;
-
-export function getServiceContainer(): ServiceContainer {
-  if (!globalContainer) {
-    globalContainer = new ServiceContainer();
-  }
-  return globalContainer;
-}
-
-export function setServiceContainer(container: ServiceContainer): void {
-  globalContainer = container;
 }

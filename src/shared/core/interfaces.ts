@@ -3,30 +3,26 @@
  * 提供清晰的模块接口契约
  */
 
-import type { 
-  ChannelInfo, 
-  IPInfo,
+import type {
+  ChannelInfo,
   ChannelValidationResult
-} from './types/channel.ts';
-
+} from '../types/channel';
 import type {
   ScrapingResult,
-  ScrapingStatus,
-  ScrapingTask,
+  ScrapingStatus
+} from '../types/scraper';
+import type {
   ScrapingDecision
-} from './types/scraper.ts';
-
+} from '../types/scheduler';
 import type {
   SystemConfig,
   RequestOptions
-} from './types/config.ts';
-
+} from './types/config';
 import type {
   ChannelCheckConfig,
   CheckStatus,
-  ChannelCheckResult,
   ChannelCheck
-} from './types/monitoring.ts';
+} from './types/monitoring';
 
 // HTTP客户端接口
 export interface HttpClient {
@@ -115,8 +111,8 @@ export interface EnhancedConfigManager {
 
 // 增强HTTP客户端接口
 export interface EnhancedHttpClient {
-  get<T = string>(url: string, options?: any): Promise<any>;
-  post<T = any>(url: string, data?: any, options?: any): Promise<any>;
+  get(url: string, options?: any): Promise<any>;
+  post(url: string, data?: any, options?: any): Promise<any>;
   updateConfig(config: Partial<any>): void;
   getConfig(): any;
   clearCache(): void;

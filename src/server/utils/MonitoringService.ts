@@ -3,8 +3,8 @@
  * 负责系统监控、警报管理和性能分析
  */
 
-import { progressMonitor, type PerformanceMetrics } from './ProgressMonitor.ts';
-import { errorHandler } from '../../shared/core/ErrorHandler.ts';
+import { progressMonitor, type PerformanceMetrics } from './ProgressMonitor';
+import { errorHandler } from '../../shared/core/ErrorHandler';
 
 export interface MonitoringConfig {
   enabled: boolean;
@@ -94,7 +94,6 @@ export class MonitoringService {
       // 清理过期警报
       this.cleanupOldAlerts();
     } catch (error) {
-      console.error('健康检查失败:', error);
       errorHandler.handle(error, {
         context: 'MonitoringService.performHealthCheck',
       });

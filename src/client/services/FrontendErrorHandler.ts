@@ -9,7 +9,7 @@ import {
   type ErrorContext, 
   type AppError, 
   type ErrorHandlerConfig 
-} from '../../shared/core/error/types.ts';
+} from '../../shared/core/error/types';
 
 /**
  * 前端错误处理器类
@@ -186,14 +186,14 @@ export class FrontendErrorHandler {
 
     // 根据错误代码确定具体的错误类型
     if (error.code === 'ENOENT') {
-      errorType = ErrorType.FILE_NOT_FOUND;
-      severity = ErrorSeverity.MEDIUM;
+      errorType = ErrorType.SYSTEM_ERROR;
+      severity = ErrorSeverity.HIGH;
     } else if (error.code === 'EACCES' || error.code === 'EPERM') {
-      errorType = ErrorType.FILE_PERMISSION_ERROR;
+      errorType = ErrorType.SYSTEM_ERROR;
       severity = ErrorSeverity.HIGH;
     } else if (error.code === 'ENOSPC') {
-      errorType = ErrorType.DISK_SPACE_ERROR;
-      severity = ErrorSeverity.CRITICAL;
+      errorType = ErrorType.SYSTEM_ERROR;
+      severity = ErrorSeverity.HIGH;
     }
 
     const appError = this.createError(
@@ -358,20 +358,20 @@ export class FrontendErrorHandler {
 
     // 文件系统错误
     if (error.code === 'ENOENT') {
-      return ErrorType.FILE_NOT_FOUND;
+      return ErrorType.SYSTEM_ERROR;
     }
 
     if (error.code === 'EACCES' || error.code === 'EPERM') {
-      return ErrorType.FILE_PERMISSION_ERROR;
+      return ErrorType.SYSTEM_ERROR;
     }
 
     if (error.code === 'ENOSPC') {
-      return ErrorType.DISK_SPACE_ERROR;
+      return ErrorType.SYSTEM_ERROR;
     }
 
     // 内存错误
     if (error.code === 'ENOMEM' || error.message?.includes('out of memory')) {
-      return ErrorType.MEMORY_ERROR;
+      return ErrorType.SYSTEM_ERROR;
     }
 
     // 业务逻辑错误
@@ -412,7 +412,7 @@ export class FrontendErrorHandler {
    * @param type - 错误类型
    * @returns 错误严重程度
    */
-  private detectSeverity(error: any, type: ErrorType): ErrorSeverity {
+  private detectSeverity(_error: any, type: ErrorType): ErrorSeverity {
     switch (type) {
       case ErrorType.VALIDATION_ERROR:
         return ErrorSeverity.LOW;
@@ -452,7 +452,7 @@ export class FrontendErrorHandler {
       ErrorType.PARSING_ERROR,
       ErrorType.VALIDATION_ERROR,
       ErrorType.SCHEDULING_ERROR,
-    ].includes(type);
+    ].includes(type as any);
   }
 
   /**
@@ -466,7 +466,7 @@ export class FrontendErrorHandler {
       ErrorType.HTTP_ERROR,
       ErrorType.TIMEOUT_ERROR,
       ErrorType.PARSING_ERROR,
-    ].includes(type);
+    ].includes(type as any);
   }
 
   /**
@@ -526,44 +526,11 @@ export class FrontendErrorHandler {
 }
 
 // 创建单例实例
-export const frontendErrorHandler = new FrontendErrorHandler();
+const frontendErrorHandler = new FrontendErrorHandler();
 
-// 导出便捷方法
-export const handleFrontendError = (error: any, context?: ErrorContext) =>
-  frontendErrorHandler.handle(error, context);
-
-export const createFrontendHttpError = (url: string, status: number, message: string) =>
-  frontendErrorHandler.handleHttpError(url, status, message);
-
+// 导出便捷函数
 export const createFrontendNetworkError = (error: any, url?: string) =>
   frontendErrorHandler.handleNetworkError(error, url);
-
-export const createFrontendValidationError = (
-  field: string,
-  value: any,
-  rule: string
-) => frontendErrorHandler.handleValidationError(field, value, rule);
-
-export const createFrontendConfigError = (message: string, config?: any) =>
-  frontendErrorHandler.handleConfigError(message, config);
-
-export const createFrontendParsingError = (message: string, details?: any) =>
-  frontendErrorHandler.handleParsingError(message, details);
-
-export const createFrontendScrapingError = (message: string, details?: any) =>
-  frontendErrorHandler.handleScrapingError(message, details);
-
-export const createFrontendFileSystemError = (
-  operation: string,
-  path: string,
-  error: any
-) => frontendErrorHandler.handleFileSystemError(operation, path, error);
-
-export const createFrontendSchedulingError = (expression: string, error: any) =>
-  frontendErrorHandler.handleSchedulingError(expression, error);
-
-export const createFrontendCronError = (expression: string, error: any) =>
-  frontendErrorHandler.handleCronError(expression, error);
 
 // 导出类型
 export { ErrorType, ErrorSeverity, type ErrorContext, type AppError, type ErrorHandlerConfig };

@@ -6,8 +6,8 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import https from 'https';
 import http from 'http';
-import { Logger } from '../utils/logger.ts';
-import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler.ts';
+import { Logger } from '../utils/logger';
+import { errorHandler, ErrorType } from '../../shared/core/ErrorHandler';
 
 /**
  * HTTP客户端配置接口

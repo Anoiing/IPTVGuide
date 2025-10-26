@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { errorHandler, ErrorType } from './ErrorHandler.ts';
+import { errorHandler } from './ErrorHandler';
 
 export interface ConfigSchema {
   [key: string]: {
@@ -75,7 +75,6 @@ export class ConfigManager<
    * 设置配置项
    */
   set<K extends keyof T>(key: K, value: T[K]): void {
-    const oldValue = this.config[key];
     this.config[key] = value;
 
     if (this.options.autoSave) {

@@ -1,8 +1,6 @@
 /**
- * 配置相关类型定义
+ * 系统配置相关类型定义
  */
-
-import type { ChannelCheckConfig } from './monitoring.ts';
 
 export interface SystemConfig {
   // 基础配置
